@@ -147,17 +147,8 @@ export function validateTCIData(data) {
       name: row.name?.trim() || `Unknown_${rowNum}`,
     };
 
-    // 추가 정보 (있으면)
-    if (row.gender) {
-      // 성별 값 정규화: 남/여/M/F/male/female -> M/F
-      const g = row.gender.toString().trim().toLowerCase();
-      if (g === '남' || g === 'm' || g === 'male' || g === '남성') {
-        member.gender = 'M';
-      } else if (g === '여' || g === 'f' || g === 'female' || g === '여성') {
-        member.gender = 'F';
-      }
-      // 알 수 없는 형식은 무시 (gender 필드 추가하지 않음)
-    }
+    // 추가 정보 (gender는 DB 스키마 문제로 제외)
+    // if (row.gender) member.gender = ...;
     if (row.age) member.age = parseInt(row.age) || null;
     if (row.id) member.external_id = row.id;
 
