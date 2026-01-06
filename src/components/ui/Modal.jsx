@@ -6,7 +6,8 @@ export default function Modal({
   title,
   children,
   size = 'md',
-  showCloseButton = true
+  showCloseButton = true,
+  closeOnBackdropClick = true
 }) {
   const modalRef = useRef(null);
 
@@ -43,7 +44,7 @@ export default function Modal({
   if (!isOpen) return null;
 
   const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
+    if (closeOnBackdropClick && e.target === e.currentTarget) {
       onClose();
     }
   };

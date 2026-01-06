@@ -64,7 +64,7 @@ export default function GroupCreate({ isOpen, onClose, onSubmit }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="새 그룹 만들기">
+    <Modal isOpen={isOpen} onClose={handleClose} title="새 그룹 만들기" closeOnBackdropClick={false}>
       {error && (
         <Alert variant="error" className="mb-4" onClose={() => setError('')}>
           {error}

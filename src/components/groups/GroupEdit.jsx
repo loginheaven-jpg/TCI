@@ -79,7 +79,7 @@ export default function GroupEdit({ isOpen, onClose, group, onSubmit }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="그룹 수정">
+    <Modal isOpen={isOpen} onClose={handleClose} title="그룹 수정" closeOnBackdropClick={false}>
       {error && (
         <Alert variant="error" className="mb-4" onClose={() => setError('')}>
           {error}
