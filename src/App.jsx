@@ -282,49 +282,49 @@ const subScaleGroups = {
   ST: ['ST1', 'ST2', 'ST3']
 };
 
-// 상위 척도 강점/약점 특성
+// 상위 척도 강점/약점 특성 (풍부한 설명)
 const mainScaleTraits = {
   NS: {
-    lowAdv: '안정적, 신중함, 체계적',
-    lowDis: '변화 두려움, 경직됨',
-    highAdv: '탐구적, 창의적, 유연함',
-    highDis: '충동적, 산만함, 지속력 부족'
+    lowAdv: ['차분하고 안정적인', '숙고하는/집중하는', '검소하고 절약하는', '차분하고 질서정연한'],
+    lowDis: ['익숙함을 고수하는', '관습적인', '인색한', '무뚝뚝한'],
+    highAdv: ['활발히 탐색하는', '새로운 것에 개방적인', '가진 것을 십분 즐기는', '자유롭고 혁신적인'],
+    highDis: ['충동적인/흥분하는', '중독에 취약한', '낭비하는', '분노조절이 잘 안 되는']
   },
   HA: {
-    lowAdv: '낙관적, 자신감, 대담함',
-    lowDis: '위험 간과, 무모함',
-    highAdv: '위험 대비, 신중함, 안전 지향',
-    highDis: '걱정 과다, 긴장 불안, 회피적'
+    lowAdv: ['낙관적인/자신감 있는', '침착하고 대담한', '사교적으로 잘 어하는', '활력이 넘치는'],
+    lowDis: ['위험대책이 없는', '문제를 간과하는', '쉽게 사람을 믿는', '과로하는'],
+    highAdv: ['잘 대비하는', '안전을 중시하는', '신중하게 접근하는', '몸을 잘 관리하는'],
+    highDis: ['염려하고 걱정하는', '위축되고 억제되는', '낯선 사람 경계하는', '쉽게 지치는']
   },
   RD: {
-    lowAdv: '독립적, 객관적, 자기 충족적',
-    lowDis: '감정 둔감, 고립 위험',
-    highAdv: '공감적, 친밀함, 협력적',
-    highDis: '의존적, 거절 민감, 타인 평가 과민'
+    lowAdv: ['강인하고 현실적인', '타인 영향을 덜 받고 객관적인', '스스로 충전되는', '독립적인, 주관이 뚜렷한'],
+    lowDis: ['둔감하고 무관심한', '차갑고 냉정한', '사회접촉에서 소진되는', '외골수적이고 눈치가 없는'],
+    highAdv: ['동정심/이해심 많은', '친밀하게 다가가는', '마음을 열고 다불어 사는', '눈치가 빠른'],
+    highDis: ['기분이 쉽게 변하는', '마음이 여린', '의존적인', '거절/모욕에 민감한']
   },
   PS: {
-    lowAdv: '유연함, 탄력적, 현실 만족',
-    lowDis: '지속력 부족, 쉽게 포기',
-    highAdv: '꾸준함, 성실함, 성취 지향',
-    highDis: '과도한 완벽주의, 융통성 부족'
+    lowAdv: ['전략적이고 융통성있는', '현재에 만족하는', '변화에 잘 대응하는', '실용적인'],
+    lowDis: ['미루는', '쉽게 포기하는', '야망이 없는', '능력보다 작게 성취하는'],
+    highAdv: ['책임감있는', '심지가 굳고 꾸준한', '야심적인, 도전하는', '성취수준이 높은'],
+    highDis: ['완고한', '변화의 결단을 미루는', '무리한 기준을 고수하는', '자신에게 혹독한']
   },
   SD: {
-    lowAdv: '상황 적응적, 유연한 귀인',
-    lowDis: '무력감, 방향성 부족, 남탓',
-    highAdv: '책임감, 목표 지향, 자기효능감',
-    highDis: '과도한 자기 비난, 경직된 원칙'
+    lowAdv: ['상황에 유연한', '겸손한', '훈련으로 성장하려는', '상황 적응적인'],
+    lowDis: ['남탓하는', '목적/의미 탐색중인', '무능감/타인 의존', '유혹에 굴복하는'],
+    highAdv: ['책임지는/신뢰로운', '장기목표와 가치 지향', '자기효능감/도전의식', '가치에 부합하는 행동'],
+    highDis: ['과도한 자기 비난', '지나친 미래 지향', '자만심', '경직된 원칙주의']
   },
   CO: {
-    lowAdv: '비판적 사고, 자기 보호',
-    lowDis: '자기중심적, 공감 부족',
-    highAdv: '타인 수용, 이타적, 협력적',
-    highDis: '자기 희생, 무비판적 수용'
+    lowAdv: ['비판적 사고', '객관적 판단', '자기 보호', '정의감'],
+    lowDis: ['자기중심적', '타인 배려 부족', '이기적', '복수심/편파적'],
+    highAdv: ['타인 가치 존중/관대', '역지사지/공감', '이타적/팀웍 선호', '용서하고 공정함'],
+    highDis: ['무비판적 수용', '감정적 소진', '자기 희생', '지나친 관용']
   },
   ST: {
-    lowAdv: '현실 집중, 실용적, 경험주의',
-    lowDis: '영적 관심 부족, 삶의 의미 탐색 어려움',
-    highAdv: '창조적 몰입, 연결감, 초월 지향',
-    highDis: '현실 감각 저하, 비현실적 기대'
+    lowAdv: ['늘 깨어 있는', '개인주의/현실 집중', '유물론/경험주의', '실용적인'],
+    lowDis: ['무미건조한', '자연을 도구로 봄', '설명 불가 상황 대처 곤란', '영적 관심 부족'],
+    highAdv: ['자기초월/창조적 몰입', '개인초월 연결감', '초감각적 영적 믿음', '회복력 높음'],
+    highDis: ['현실감각 저하', '비현실적 기대', '맹신', '현실 도피적']
   }
 };
 
@@ -726,12 +726,12 @@ function AnalysisPage({ group, onBack }) {
             <h3 className="text-xl font-bold text-gray-800">{scaleLabels[scale]}</h3>
             <p className="text-sm text-gray-500">{engLabels[scale]}</p>
           </div>
-          <div className="p-4">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={mainData} margin={{ top: 20, right: 10, left: 10, bottom: 60 }}>
+          <div className="p-3">
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={mainData} margin={{ top: 10, right: 5, left: 5, bottom: 45 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" interval={0} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+                <XAxis dataKey="name" tick={{ fontSize: 9 }} angle={-45} textAnchor="end" interval={0} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
                 <Tooltip formatter={(v) => [`${v}%`, '백분위']} contentStyle={{ borderRadius: 8 }} />
                 <ReferenceLine y={30} stroke="#93C5FD" strokeDasharray="4 4" strokeWidth={2} />
                 <ReferenceLine y={70} stroke="#93C5FD" strokeDasharray="4 4" strokeWidth={2} />
@@ -747,17 +747,31 @@ function AnalysisPage({ group, onBack }) {
           </div>
           {/* 강점/약점 테이블 */}
           {mainScaleTraits[scale] && (
-            <div className="px-4 pb-4">
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-orange-50 rounded-lg p-2.5">
-                  <div className="text-center font-bold text-orange-600 mb-1.5 border-b border-orange-200 pb-1">낮을 때 (↓)</div>
-                  <div className="text-green-600 mb-1">✓ {mainScaleTraits[scale].lowAdv}</div>
-                  <div className="text-orange-500">✗ {mainScaleTraits[scale].lowDis}</div>
+            <div className="px-3 pb-3">
+              <div className="grid grid-cols-2 gap-2">
+                {/* 낮을 때 */}
+                <div className="bg-orange-50 rounded-lg p-2">
+                  <div className="text-center font-bold text-orange-600 text-xs mb-1 border-b border-orange-200 pb-1">낮을 때 (↓)</div>
+                  <div className="space-y-0.5">
+                    {mainScaleTraits[scale].lowAdv.map((item, i) => (
+                      <div key={i} className="text-green-600 text-[10px]">✓ {item}</div>
+                    ))}
+                    {mainScaleTraits[scale].lowDis.map((item, i) => (
+                      <div key={i} className="text-orange-500 text-[10px]">✗ {item}</div>
+                    ))}
+                  </div>
                 </div>
-                <div className="bg-blue-50 rounded-lg p-2.5">
-                  <div className="text-center font-bold text-blue-600 mb-1.5 border-b border-blue-200 pb-1">높을 때 (↑)</div>
-                  <div className="text-green-600 mb-1">✓ {mainScaleTraits[scale].highAdv}</div>
-                  <div className="text-orange-500">✗ {mainScaleTraits[scale].highDis}</div>
+                {/* 높을 때 */}
+                <div className="bg-blue-50 rounded-lg p-2">
+                  <div className="text-center font-bold text-blue-600 text-xs mb-1 border-b border-blue-200 pb-1">높을 때 (↑)</div>
+                  <div className="space-y-0.5">
+                    {mainScaleTraits[scale].highAdv.map((item, i) => (
+                      <div key={i} className="text-green-600 text-[10px]">✓ {item}</div>
+                    ))}
+                    {mainScaleTraits[scale].highDis.map((item, i) => (
+                      <div key={i} className="text-orange-500 text-[10px]">✗ {item}</div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
