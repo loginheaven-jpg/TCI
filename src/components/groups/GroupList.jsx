@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useGroups } from '../../hooks/useGroups';
-import { useMembers } from '../../hooks/useMembers';
 import GroupCard from './GroupCard';
 import GroupCreate from './GroupCreate';
 import GroupEdit from './GroupEdit';
@@ -21,10 +20,10 @@ export default function GroupList({ onSelectGroup }) {
     updateGroup,
     deleteGroup,
     fetchGroups,
+    addMembers,
     verifyGroupPassword,
     isGroupOwner
   } = useGroups(user?.id);
-  const { addMembers } = useMembers();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
