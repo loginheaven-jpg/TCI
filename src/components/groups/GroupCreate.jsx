@@ -6,6 +6,8 @@ import Alert from '../ui/Alert';
 export default function GroupCreate({ isOpen, onClose, onSubmit }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -18,11 +20,32 @@ export default function GroupCreate({ isOpen, onClose, onSubmit }) {
       return;
     }
 
+    if (!password.trim()) {
+      setError('그룹 암호를 입력해주세요.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('암호가 일치하지 않습니다.');
+      return;
+    }
+
+    if (password.length < 4) {
+      setError('암호는 4자 이상이어야 합니다.');
+      return;
+    }
+
     setLoading(true);
     try {
-      await onSubmit({ name: name.trim(), description: description.trim() });
+      await onSubmit({
+        name: name.trim(),
+        description: description.trim(),
+        password: password.trim()
+      });
       setName('');
       setDescription('');
+      setPassword('');
+      setConfirmPassword('');
       onClose();
     } catch (err) {
       setError(err.message || '그룹 생성에 실패했습니다.');
@@ -34,6 +57,8 @@ export default function GroupCreate({ isOpen, onClose, onSubmit }) {
   const handleClose = () => {
     setName('');
     setDescription('');
+    setPassword('');
+    setConfirmPassword('');
     setError('');
     onClose();
   };
@@ -73,6 +98,34 @@ export default function GroupCreate({ isOpen, onClose, onSubmit }) {
             className="w-full px-4 py-3 border border-gray-200 rounded-xl
                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none"
             placeholder="그룹에 대한 간단한 설명을 입력하세요"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            그룹 암호 <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl
+                      focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+            placeholder="4자 이상"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            암호 확인 <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl
+                      focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+            placeholder="암호 재입력"
           />
         </div>
 

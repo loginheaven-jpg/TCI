@@ -38,13 +38,14 @@ export function useGroups(userId) {
     fetchGroups();
   }, [fetchGroups]);
 
-  const createGroup = async (name, description = '') => {
+  const createGroup = async (name, description = '', password = '') => {
     try {
       const { data, error: createError } = await supabase
         .from('groups')
         .insert({
           name,
           description,
+          password,
           user_id: userId
         })
         .select()
@@ -146,6 +147,26 @@ export function useGroups(userId) {
     }
   };
 
+  const verifyGroupPassword = async (groupId, password) => {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('groups')
+        .select('password')
+        .eq('id', groupId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      return { valid: data.password === password, error: null };
+    } catch (err) {
+      return { valid: false, error: err };
+    }
+  };
+
+  const isGroupOwner = (group) => {
+    return group?.user_id === userId;
+  };
+
   return {
     groups,
     loading,
@@ -155,6 +176,8 @@ export function useGroups(userId) {
     updateGroup,
     deleteGroup,
     addMembers,
-    removeMember
+    removeMember,
+    verifyGroupPassword,
+    isGroupOwner
   };
 }
