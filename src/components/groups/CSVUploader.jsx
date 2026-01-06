@@ -12,6 +12,21 @@ export default function CSVUploader({ isOpen, onClose, onUpload, groupId }) {
   const [step, setStep] = useState('upload'); // upload, preview, complete
   const fileInputRef = useRef(null);
 
+  // 파일을 특정 인코딩으로 읽기
+  const readFileWithEncoding = (file, encoding) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = reject;
+      if (encoding === 'utf-8') {
+        reader.readAsText(file, 'UTF-8');
+      } else {
+        // EUC-KR (Korean) encoding
+        reader.readAsText(file, 'EUC-KR');
+      }
+    });
+  };
+
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
@@ -26,7 +41,14 @@ export default function CSVUploader({ isOpen, onClose, onUpload, groupId }) {
     setLoading(true);
 
     try {
-      const text = await selectedFile.text();
+      // 먼저 UTF-8로 시도, 한글이 깨지면 EUC-KR로 재시도
+      let text = await readFileWithEncoding(selectedFile, 'utf-8');
+
+      // UTF-8로 읽었는데 한글 컬럼명이 없으면 EUC-KR로 재시도
+      if (!text.includes('이름') && !text.includes('name')) {
+        text = await readFileWithEncoding(selectedFile, 'euc-kr');
+      }
+
       const { data, errors: parseErrors } = parseCSV(text);
 
       if (parseErrors.length > 0) {
