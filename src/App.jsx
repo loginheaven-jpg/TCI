@@ -491,20 +491,40 @@ function AnalysisPage({ group, onBack }) {
   }));
 
   // PDF 다운로드 (개인 리포트용 - 단일 선택 시만)
+  const [pdfLoading, setPdfLoading] = useState(false);
+
   const handleDownloadPDF = async () => {
     if (!reportRef.current || selectedPersons.size !== 1) return;
+
     const selectedName = Array.from(selectedPersons)[0];
-    // html2pdf 동적 로드
-    const element = reportRef.current;
-    const opt = {
-      margin: 10,
-      filename: `TCI_${selectedName}_리포트.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-    // 실제 구현시 html2pdf 라이브러리 사용
-    alert('PDF 다운로드 기능은 실제 배포 시 html2pdf.js로 구현됩니다.');
+    setPdfLoading(true);
+
+    try {
+      // html2pdf 동적 로드
+      const html2pdf = (await import('html2pdf.js')).default;
+
+      const element = reportRef.current;
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `TCI_${selectedName}_리포트.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          logging: false
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      await html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error('PDF 생성 오류:', error);
+      alert('PDF 생성 중 오류가 발생했습니다.');
+    } finally {
+      setPdfLoading(false);
+    }
   };
 
   // 거미줄 차트
@@ -700,9 +720,18 @@ function AnalysisPage({ group, onBack }) {
                 <p className="text-blue-300 text-sm mt-2">TCI 기질 및 성격검사 결과 리포트</p>
               </div>
             </div>
-            <button onClick={handleDownloadPDF}
-              className="px-6 py-3 bg-white/20 rounded-xl hover:bg-white/30 transition text-sm font-medium backdrop-blur flex items-center gap-2">
-              📄 PDF 다운로드
+            <button
+              onClick={handleDownloadPDF}
+              disabled={pdfLoading}
+              className={`px-6 py-3 bg-white/20 rounded-xl hover:bg-white/30 transition text-sm font-medium backdrop-blur flex items-center gap-2 ${pdfLoading ? 'opacity-50 cursor-wait' : ''}`}
+            >
+              {pdfLoading ? (
+                <>
+                  <span className="animate-spin">⏳</span> PDF 생성 중...
+                </>
+              ) : (
+                <>📄 PDF 다운로드</>
+              )}
             </button>
           </div>
         </div>
