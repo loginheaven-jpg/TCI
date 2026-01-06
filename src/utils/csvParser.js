@@ -148,7 +148,16 @@ export function validateTCIData(data) {
     };
 
     // 추가 정보 (있으면)
-    if (row.gender) member.gender = row.gender;
+    if (row.gender) {
+      // 성별 값 정규화: 남/여/M/F/male/female -> M/F
+      const g = row.gender.toString().trim().toLowerCase();
+      if (g === '남' || g === 'm' || g === 'male' || g === '남성') {
+        member.gender = 'M';
+      } else if (g === '여' || g === 'f' || g === 'female' || g === '여성') {
+        member.gender = 'F';
+      }
+      // 알 수 없는 형식은 무시 (gender 필드 추가하지 않음)
+    }
     if (row.age) member.age = parseInt(row.age) || null;
     if (row.id) member.external_id = row.id;
 
