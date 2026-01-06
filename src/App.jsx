@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ReferenceLine, Cell } from 'recharts';
+import Papa from 'papaparse';
 import {
   TEMPERAMENT_TYPES,
   CHARACTER_TYPES,
@@ -280,23 +281,84 @@ export default function App() {
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const text = evt.target.result;
-      const lines = text.split('\n').filter(l => l.trim());
-      const headers = lines[0].split(',').map(h => h.trim());
-      const data = lines.slice(1).map((line, idx) => {
-        const values = line.split(',');
-        const obj = { id: idx + 1 };
-        headers.forEach((h, i) => {
-          const val = values[i]?.trim();
-          obj[h] = isNaN(val) ? val : Number(val);
+
+    // 먼저 EUC-KR로 시도, 실패하면 UTF-8로 시도
+    const tryParse = (encoding) => {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const text = evt.target.result;
+
+        Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            if (results.errors.length > 0) {
+              console.warn('CSV 파싱 경고:', results.errors);
+            }
+
+            const data = results.data.map((row, idx) => {
+              const obj = { id: idx + 1 };
+
+              // 이름 필드 처리 (다양한 컬럼명 지원)
+              obj.name = row.name || row['이름'] || row['Name'] || row['NAME'] || '';
+
+              // 성별, 나이
+              obj.gender = row.gender || row['성별'] || row['Gender'] || '';
+              obj.age = parseInt(row.age || row['연령'] || row['나이'] || row['Age'] || 0) || null;
+
+              // 상위 척도 (백분위)
+              ['NS', 'HA', 'RD', 'PS', 'SD', 'CO', 'ST'].forEach(scale => {
+                const val = row[scale] || row[scale.toLowerCase()] || 0;
+                obj[scale] = parseFloat(val) || 0;
+              });
+
+              // 하위 척도 (원점수)
+              const subScales = [
+                'NS1', 'NS2', 'NS3', 'NS4',
+                'HA1', 'HA2', 'HA3', 'HA4',
+                'RD1', 'RD2', 'RD3', 'RD4',
+                'PS1', 'PS2', 'PS3', 'PS4',
+                'SD1', 'SD2', 'SD3', 'SD4', 'SD5',
+                'CO1', 'CO2', 'CO3', 'CO4', 'CO5',
+                'ST1', 'ST2', 'ST3'
+              ];
+              subScales.forEach(scale => {
+                const val = row[scale] || row[scale.toLowerCase()] || 0;
+                obj[scale] = parseFloat(val) || 0;
+              });
+
+              return obj;
+            }).filter(row => row.name); // 이름이 있는 행만 유지
+
+            if (data.length > 0) {
+              setUploadedData(data);
+            } else if (encoding === 'euc-kr') {
+              // EUC-KR에서 데이터가 없으면 UTF-8로 재시도
+              tryParse('utf-8');
+            } else {
+              alert('CSV 파일에서 데이터를 읽을 수 없습니다. 파일 형식을 확인해주세요.');
+            }
+          },
+          error: (error) => {
+            console.error('CSV 파싱 오류:', error);
+            if (encoding === 'euc-kr') {
+              tryParse('utf-8');
+            } else {
+              alert('CSV 파일을 읽는 중 오류가 발생했습니다.');
+            }
+          }
         });
-        return obj;
-      });
-      setUploadedData(data);
+      };
+      reader.onerror = () => {
+        if (encoding === 'euc-kr') {
+          tryParse('utf-8');
+        }
+      };
+      reader.readAsText(file, encoding);
     };
-    reader.readAsText(file);
+
+    // EUC-KR로 먼저 시도 (한글 엑셀 CSV의 기본 인코딩)
+    tryParse('euc-kr');
   };
 
   const handleDeleteGroup = (id) => {
