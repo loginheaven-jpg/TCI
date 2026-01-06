@@ -1,14 +1,66 @@
 import Papa from 'papaparse';
 
+// CSV 컬럼 매핑 (실제 TCI CSV 형식 → 내부 형식)
+const COLUMN_MAPPING = {
+  // 이름
+  '이름': 'name',
+  'name': 'name',
+
+  // 주 척도 T점수
+  'nst': 'ns_t',
+  'hat': 'ha_t',
+  'rdt': 'rd_t',
+  'pst': 'ps_t',
+  'sdt': 'sd_t',
+  'cot': 'co_t',
+  'stt': 'st_t',
+
+  // 주 척도 백분위
+  'nsp': 'ns_p',
+  'hap': 'ha_p',
+  'rdp': 'rd_p',
+  'psp': 'ps_p',
+  'sdp': 'sd_p',
+  'cop': 'co_p',
+  'stp': 'st_p',
+
+  // 주 척도 원점수
+  'ns': 'ns_raw',
+  'ha': 'ha_raw',
+  'rd': 'rd_raw',
+  'ps': 'ps_raw',
+  'sd': 'sd_raw',
+  'co': 'co_raw',
+  'st': 'st_raw',
+
+  // 하위척도
+  'ns1': 'ns1', 'ns2': 'ns2', 'ns3': 'ns3', 'ns4': 'ns4',
+  'ha1': 'ha1', 'ha2': 'ha2', 'ha3': 'ha3', 'ha4': 'ha4',
+  'rd1': 'rd1', 'rd2': 'rd2', 'rd3': 'rd3', 'rd4': 'rd4',
+  'ps1': 'ps1', 'ps2': 'ps2', 'ps3': 'ps3', 'ps4': 'ps4',
+  'sd1': 'sd1', 'sd2': 'sd2', 'sd3': 'sd3', 'sd4': 'sd4', 'sd5': 'sd5',
+  'co1': 'co1', 'co2': 'co2', 'co3': 'co3', 'co4': 'co4', 'co5': 'co5',
+  'st1': 'st1', 'st2': 'st2', 'st3': 'st3',
+
+  // 기타 유용한 컬럼
+  '성별': 'gender',
+  '나이': 'age',
+  '연령': 'age',
+  'gender': 'gender',
+  'age': 'age',
+  'id': 'id',
+  'id(고유아이디)': 'id',
+};
+
 // CSV 필수 컬럼 정의
 export const CSV_COLUMNS = {
   required: ['name'],
   scales: ['ns', 'ha', 'rd', 'ps', 'sd', 'co', 'st'],
-  suffixes: ['_t', '_p'], // T점수, 백분위
+  suffixes: ['_t', '_p'],
   subscales: {
     ns: ['ns1', 'ns2', 'ns3', 'ns4'],
     ha: ['ha1', 'ha2', 'ha3', 'ha4'],
-    rd: ['rd1', 'rd2', 'rd3'],
+    rd: ['rd1', 'rd2', 'rd3', 'rd4'],
     ps: ['ps1', 'ps2', 'ps3', 'ps4'],
     sd: ['sd1', 'sd2', 'sd3', 'sd4', 'sd5'],
     co: ['co1', 'co2', 'co3', 'co4', 'co5'],
@@ -28,13 +80,20 @@ export function parseCSV(csvText) {
     const result = Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: (header) => header.trim().toLowerCase(),
+      transformHeader: (header) => {
+        const cleaned = header.trim().toLowerCase();
+        // 매핑된 컬럼명 반환, 없으면 원본 반환
+        return COLUMN_MAPPING[cleaned] || cleaned;
+      },
       transform: (value) => value.trim(),
     });
 
     if (result.errors.length > 0) {
+      // 중복 헤더 경고는 무시 (TCI CSV에서 흔함)
       result.errors.forEach((err) => {
-        errors.push(`행 ${err.row + 1}: ${err.message}`);
+        if (!err.message?.includes('Duplicate')) {
+          errors.push(`행 ${err.row + 1}: ${err.message}`);
+        }
       });
     }
 
@@ -44,13 +103,13 @@ export function parseCSV(csvText) {
 
     // name 컬럼 확인
     if (!headers.includes('name')) {
-      missingColumns.push('name');
+      missingColumns.push('name (또는 이름)');
     }
 
     // 주 척도 컬럼 확인 (T점수)
     CSV_COLUMNS.scales.forEach((scale) => {
       if (!headers.includes(`${scale}_t`)) {
-        missingColumns.push(`${scale}_t`);
+        missingColumns.push(`${scale}_t (또는 ${scale.toUpperCase()}T)`);
       }
     });
 
@@ -87,6 +146,11 @@ export function validateTCIData(data) {
     const member = {
       name: row.name?.trim() || `Unknown_${rowNum}`,
     };
+
+    // 추가 정보 (있으면)
+    if (row.gender) member.gender = row.gender;
+    if (row.age) member.age = parseInt(row.age) || null;
+    if (row.id) member.external_id = row.id;
 
     let hasValidScores = true;
     CSV_COLUMNS.scales.forEach((scale) => {

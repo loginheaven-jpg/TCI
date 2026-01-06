@@ -104,15 +104,16 @@ export default function CSVUploader({ isOpen, onClose, onUpload, groupId }) {
       {/* CSV 형식 안내 */}
       <div className="bg-gray-50 rounded-xl p-4">
         <h4 className="font-semibold text-gray-700 mb-2">CSV 필수 컬럼</h4>
+        <p className="text-xs text-gray-500 mb-2">TCI 검사 결과 파일 또는 아래 형식 지원</p>
         <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-          <div>• name (이름)</div>
-          <div>• ns_t, ns_p (자극추구)</div>
-          <div>• ha_t, ha_p (위험회피)</div>
-          <div>• rd_t, rd_p (사회적민감성)</div>
-          <div>• ps_t, ps_p (인내력)</div>
-          <div>• sd_t, sd_p (자율성)</div>
-          <div>• co_t, co_p (연대감)</div>
-          <div>• st_t, st_p (자기초월)</div>
+          <div>• 이름 (또는 name)</div>
+          <div>• NST, NSP (자극추구)</div>
+          <div>• HAT, HAP (위험회피)</div>
+          <div>• RDT, RDP (사회적민감성)</div>
+          <div>• PST, PSP (인내력)</div>
+          <div>• SDT, SDP (자율성)</div>
+          <div>• COT, COP (연대감)</div>
+          <div>• STT, STP (자기초월)</div>
         </div>
       </div>
 
@@ -227,6 +228,7 @@ export default function CSVUploader({ isOpen, onClose, onUpload, groupId }) {
       onClose={handleClose}
       title={step === 'complete' ? '' : 'CSV 파일 업로드'}
       size="lg"
+      closeOnBackdropClick={false}
     >
       {step === 'upload' && renderUploadStep()}
       {step === 'preview' && renderPreviewStep()}
