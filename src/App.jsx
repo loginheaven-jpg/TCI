@@ -10,6 +10,51 @@ import {
 } from './data/interpretations';
 
 // ========================================
+// 3D 바 컴포넌트 (CSS 그라데이션 효과)
+// ========================================
+const Custom3DBar = (props) => {
+  const { x, y, width, height, fill } = props;
+  if (!height || height <= 0) return null;
+
+  const sideWidth = Math.min(width * 0.15, 8);
+  const topHeight = Math.min(6, height * 0.1);
+
+  // 색상 조절 함수
+  const adjustColor = (color, amount) => {
+    const hex = color.replace('#', '');
+    const r = Math.max(0, Math.min(255, parseInt(hex.slice(0, 2), 16) + amount));
+    const g = Math.max(0, Math.min(255, parseInt(hex.slice(2, 4), 16) + amount));
+    const b = Math.max(0, Math.min(255, parseInt(hex.slice(4, 6), 16) + amount));
+    return `rgb(${r},${g},${b})`;
+  };
+
+  const gradientId = `grad3d-${fill?.replace('#', '')}-${Math.random().toString(36).substr(2, 9)}`;
+  const lighterColor = adjustColor(fill || '#3B82F6', 40);
+  const darkerColor = adjustColor(fill || '#3B82F6', -50);
+  const sideColor = adjustColor(fill || '#3B82F6', -30);
+
+  return (
+    <g>
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={lighterColor} />
+          <stop offset="50%" stopColor={fill} />
+          <stop offset="100%" stopColor={darkerColor} />
+        </linearGradient>
+      </defs>
+      {/* 메인 바 (그라데이션) */}
+      <rect x={x} y={y} width={width - sideWidth} height={height} fill={`url(#${gradientId})`} rx={3} ry={3} />
+      {/* 오른쪽 사이드 (어두운 면) */}
+      <rect x={x + width - sideWidth} y={y + topHeight} width={sideWidth} height={height - topHeight} fill={sideColor} />
+      {/* 상단 하이라이트 */}
+      <rect x={x} y={y} width={width - sideWidth} height={topHeight} fill={lighterColor} rx={3} ry={0} />
+      {/* 상단 사이드 코너 */}
+      <polygon points={`${x + width - sideWidth},${y} ${x + width},${y + topHeight} ${x + width - sideWidth},${y + topHeight}`} fill={adjustColor(fill || '#3B82F6', 20)} />
+    </g>
+  );
+};
+
+// ========================================
 // 용어 정의 (최종 확정)
 // ========================================
 const scaleLabels = {
@@ -235,6 +280,52 @@ const subScaleGroups = {
   SD: ['SD1', 'SD2', 'SD3', 'SD4', 'SD5'],
   CO: ['CO1', 'CO2', 'CO3', 'CO4', 'CO5'],
   ST: ['ST1', 'ST2', 'ST3']
+};
+
+// 상위 척도 강점/약점 특성
+const mainScaleTraits = {
+  NS: {
+    lowAdv: '안정적, 신중함, 체계적',
+    lowDis: '변화 두려움, 경직됨',
+    highAdv: '탐구적, 창의적, 유연함',
+    highDis: '충동적, 산만함, 지속력 부족'
+  },
+  HA: {
+    lowAdv: '낙관적, 자신감, 대담함',
+    lowDis: '위험 간과, 무모함',
+    highAdv: '위험 대비, 신중함, 안전 지향',
+    highDis: '걱정 과다, 긴장 불안, 회피적'
+  },
+  RD: {
+    lowAdv: '독립적, 객관적, 자기 충족적',
+    lowDis: '감정 둔감, 고립 위험',
+    highAdv: '공감적, 친밀함, 협력적',
+    highDis: '의존적, 거절 민감, 타인 평가 과민'
+  },
+  PS: {
+    lowAdv: '유연함, 탄력적, 현실 만족',
+    lowDis: '지속력 부족, 쉽게 포기',
+    highAdv: '꾸준함, 성실함, 성취 지향',
+    highDis: '과도한 완벽주의, 융통성 부족'
+  },
+  SD: {
+    lowAdv: '상황 적응적, 유연한 귀인',
+    lowDis: '무력감, 방향성 부족, 남탓',
+    highAdv: '책임감, 목표 지향, 자기효능감',
+    highDis: '과도한 자기 비난, 경직된 원칙'
+  },
+  CO: {
+    lowAdv: '비판적 사고, 자기 보호',
+    lowDis: '자기중심적, 공감 부족',
+    highAdv: '타인 수용, 이타적, 협력적',
+    highDis: '자기 희생, 무비판적 수용'
+  },
+  ST: {
+    lowAdv: '현실 집중, 실용적, 경험주의',
+    lowDis: '영적 관심 부족, 삶의 의미 탐색 어려움',
+    highAdv: '창조적 몰입, 연결감, 초월 지향',
+    highDis: '현실 감각 저하, 비현실적 기대'
+  }
 };
 
 // 샘플 데이터
@@ -591,23 +682,25 @@ function AnalysisPage({ group, onBack }) {
 
   // 거미줄 차트
   const renderRadarChart = () => (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <h3 className="text-lg font-bold text-gray-800 mb-4">
-        {mainTab === 'temperament' ? '기질' : '성격'} 프로파일
+    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-base font-bold text-gray-800">
+          {mainTab === 'temperament' ? '기질' : '성격'} 프로파일
+        </h3>
         {selectedPersons.size > 0 && (
-          <span className="ml-2 text-sm font-normal text-blue-600">
-            ({selectedPersons.size}명 선택됨)
+          <span className="text-sm text-blue-600 font-medium">
+            {selectedPersons.size}명 선택됨
           </span>
         )}
-      </h3>
-      <ResponsiveContainer width="100%" height={420}>
+      </div>
+      <ResponsiveContainer width="100%" height={520}>
         <RadarChart data={radarData}>
           <PolarGrid stroke="#e5e7eb" />
-          <PolarAngleAxis dataKey="scale" tick={{ fontSize: 12, fill: '#374151' }} />
+          <PolarAngleAxis dataKey="scale" tick={{ fontSize: 13, fill: '#374151', fontWeight: 600 }} />
           <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10 }} tickCount={6} />
           {rawData.map((p, i) => (
             <Radar key={getName(p)} name={getName(p)} dataKey={getName(p)}
-              stroke={memberColors[i % memberColors.length]} 
+              stroke={memberColors[i % memberColors.length]}
               fill={memberColors[i % memberColors.length]}
               fillOpacity={isSelected(getName(p)) ? 0.15 : 0.02}
               strokeWidth={isSelected(getName(p)) ? 2.5 : 0.5}
@@ -634,7 +727,7 @@ function AnalysisPage({ group, onBack }) {
             <p className="text-sm text-gray-500">{engLabels[scale]}</p>
           </div>
           <div className="p-4">
-            <ResponsiveContainer width="100%" height={320}>
+            <ResponsiveContainer width="100%" height={280}>
               <BarChart data={mainData} margin={{ top: 20, right: 10, left: 10, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" interval={0} />
@@ -642,16 +735,33 @@ function AnalysisPage({ group, onBack }) {
                 <Tooltip formatter={(v) => [`${v}%`, '백분위']} contentStyle={{ borderRadius: 8 }} />
                 <ReferenceLine y={30} stroke="#93C5FD" strokeDasharray="4 4" strokeWidth={2} />
                 <ReferenceLine y={70} stroke="#93C5FD" strokeDasharray="4 4" strokeWidth={2} />
-                <Bar dataKey="value" fill={mainColor} radius={[6, 6, 0, 0]}>
+                <Bar dataKey="value" fill={mainColor} shape={<Custom3DBar />}>
                   {mainData.map((entry, i) => (
-                    <Cell key={i} 
-                      fill={isSelected(entry.name) ? memberColors[i % memberColors.length] : '#E5E7EB'}
-                      opacity={isSelected(entry.name) ? 1 : 0.4} />
+                    <Cell key={i}
+                      fill={isSelected(entry.name) ? memberColors[i % memberColors.length] : '#D1D5DB'}
+                    />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
+          {/* 강점/약점 테이블 */}
+          {mainScaleTraits[scale] && (
+            <div className="px-4 pb-4">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-orange-50 rounded-lg p-2.5">
+                  <div className="text-center font-bold text-orange-600 mb-1.5 border-b border-orange-200 pb-1">낮을 때 (↓)</div>
+                  <div className="text-green-600 mb-1">✓ {mainScaleTraits[scale].lowAdv}</div>
+                  <div className="text-orange-500">✗ {mainScaleTraits[scale].lowDis}</div>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-2.5">
+                  <div className="text-center font-bold text-blue-600 mb-1.5 border-b border-blue-200 pb-1">높을 때 (↑)</div>
+                  <div className="text-green-600 mb-1">✓ {mainScaleTraits[scale].highAdv}</div>
+                  <div className="text-orange-500">✗ {mainScaleTraits[scale].highDis}</div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 우측: 하위지표 가로 막대 */}
@@ -1145,22 +1255,37 @@ function AnalysisPage({ group, onBack }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       {/* 헤더 */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-4 p-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button onClick={onBack} className="text-gray-500 hover:text-gray-700 font-medium flex items-center gap-1">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-4 p-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="text-gray-500 hover:text-gray-700 font-medium flex items-center gap-1 text-sm">
             ← 목록
           </button>
-          <div className="w-px h-6 bg-gray-200"></div>
-          <h1 className="text-xl font-bold text-gray-800">{group.name}</h1>
-          <span className="text-sm bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">{rawData.length}명</span>
+          <div className="w-px h-5 bg-gray-200"></div>
+          <h1 className="text-lg font-bold text-gray-800">{group.name}</h1>
+          {viewMode === 'group' && (
+            <>
+              <div className="w-px h-5 bg-gray-200"></div>
+              <div className="flex gap-1">
+                <button onClick={() => { setMainTab('temperament'); setSubTab('all'); }}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${mainTab === 'temperament' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  기질
+                </button>
+                <button onClick={() => { setMainTab('character'); setSubTab('all'); }}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${mainTab === 'character' ? 'bg-green-600 text-white shadow-md shadow-green-500/25' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                  성격
+                </button>
+              </div>
+            </>
+          )}
+          <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">{rawData.length}명</span>
         </div>
         <div className="flex gap-2">
           <button onClick={() => setViewMode('group')}
-            className={`px-5 py-2 rounded-xl text-sm font-medium transition ${viewMode === 'group' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${viewMode === 'group' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             그룹 차트
           </button>
           <button onClick={() => setViewMode('individual')}
-            className={`px-5 py-2 rounded-xl text-sm font-medium transition ${viewMode === 'individual' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${viewMode === 'individual' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             개인 리포트
           </button>
         </div>
@@ -1203,17 +1328,7 @@ function AnalysisPage({ group, onBack }) {
         <div className="flex-1">
           {viewMode === 'group' ? (
             <>
-              <div className="flex gap-3 mb-4">
-                <button onClick={() => { setMainTab('temperament'); setSubTab('all'); }}
-                  className={`px-6 py-2.5 rounded-xl text-sm font-bold transition ${mainTab === 'temperament' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300'}`}>
-                  기질 (Temperament)
-                </button>
-                <button onClick={() => { setMainTab('character'); setSubTab('all'); }}
-                  className={`px-6 py-2.5 rounded-xl text-sm font-bold transition ${mainTab === 'character' ? 'bg-green-600 text-white shadow-lg shadow-green-500/25' : 'bg-white text-gray-600 border border-gray-200 hover:border-green-300'}`}>
-                  성격 (Character)
-                </button>
-              </div>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-1.5 mb-4 inline-flex gap-1">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-1.5 mb-3 inline-flex gap-1">
                 {getSubTabs().map(tab => (
                   <button key={tab.key} onClick={() => setSubTab(tab.key)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
@@ -1229,27 +1344,6 @@ function AnalysisPage({ group, onBack }) {
           ) : (
             renderIndividualReport()
           )}
-        </div>
-      </div>
-
-      {/* 범례 */}
-      <div className="mt-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-        <div className="flex flex-wrap gap-4 justify-center">
-          {rawData.map((p, i) => {
-            const name = getName(p);
-            const selected = selectedPersons.has(name);
-            return (
-              <button key={i} onClick={() => togglePerson(name)}
-                className={`flex items-center gap-2 text-sm transition px-3 py-1 rounded-full ${
-                  selected ? 'bg-blue-50 text-blue-700 font-bold' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>
-                <span className="w-3 h-3 rounded-full shadow" style={{ backgroundColor: memberColors[i % memberColors.length] }}></span>
-                {name}
-              </button>
-            );
-          })}
-        </div>
-        <div className="text-center text-xs text-gray-400 mt-3">
-          클릭하여 참가자 선택/해제 · 복수 선택 가능 · 백분위 기준: 30↓ 낮음(L), 70↑ 높음(H)
         </div>
       </div>
     </div>
