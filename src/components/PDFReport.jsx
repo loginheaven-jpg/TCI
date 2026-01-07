@@ -417,15 +417,18 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                     const avg = subScaleAverages[code] || 10;
                     const level = getSubScaleLevel(val, avg);
                     const traits = scaleTraits[code] || { lowAdv: [], highAdv: [] };
+                    const scaleName = traits.name || scaleLabels[code] || code;
+                    const lowLabel = traits.lowLabel || '낮을 때';
+                    const highLabel = traits.highLabel || '높을 때';
                     return (
                       <View key={code} style={styles.tableRow}>
-                        <Text style={[styles.tableCell, styles.colScaleTemp, { fontWeight: 700 }]}>{code}</Text>
+                        <Text style={[styles.tableCell, styles.colScaleTemp, { fontWeight: 700 }]}>{code}{'\n'}{scaleName}</Text>
                         <Text style={[styles.tableCell, styles.colValueTemp]}>{val}({avg})</Text>
                         <View style={[styles.colLevelTemp, { alignItems: 'center' }]}>
                           <Text style={[styles.levelBadge, getLevelStyle(level)]}>{level}</Text>
                         </View>
-                        <Text style={[styles.tableCell, styles.colTraitTemp]}>{traits.lowAdv?.join(', ') || '-'}</Text>
-                        <Text style={[styles.tableCell, styles.colTraitTemp]}>{traits.highAdv?.join(', ') || '-'}</Text>
+                        <Text style={[styles.tableCell, styles.colTraitTemp]}>[{lowLabel}]{'\n'}{traits.lowAdv?.join(', ') || '-'}</Text>
+                        <Text style={[styles.tableCell, styles.colTraitTemp]}>[{highLabel}]{'\n'}{traits.highAdv?.join(', ') || '-'}</Text>
                       </View>
                     );
                   })}
@@ -454,12 +457,15 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                   {subScaleGroups[scale].map(code => {
                     const val = person[code] || 0;
                     const traits = scaleTraits[code] || { lowAdv: [], highAdv: [] };
+                    const scaleName = traits.name || scaleLabels[code] || code;
+                    const lowLabel = traits.lowLabel || '낮을 때';
+                    const highLabel = traits.highLabel || '높을 때';
                     return (
                       <View key={code} style={styles.tableRow}>
-                        <Text style={[styles.tableCell, styles.colScaleChar, { fontWeight: 700 }]}>{code}</Text>
+                        <Text style={[styles.tableCell, styles.colScaleChar, { fontWeight: 700 }]}>{code}{'\n'}{scaleName}</Text>
                         <Text style={[styles.tableCell, styles.colValueChar]}>{val}</Text>
-                        <Text style={[styles.tableCell, styles.colTraitChar]}>{traits.lowAdv?.join(', ') || '-'}</Text>
-                        <Text style={[styles.tableCell, styles.colTraitChar]}>{traits.highAdv?.join(', ') || '-'}</Text>
+                        <Text style={[styles.tableCell, styles.colTraitChar]}>[{lowLabel}]{'\n'}{traits.lowAdv?.join(', ') || '-'}</Text>
+                        <Text style={[styles.tableCell, styles.colTraitChar]}>[{highLabel}]{'\n'}{traits.highAdv?.join(', ') || '-'}</Text>
                       </View>
                     );
                   })}
@@ -599,15 +605,18 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                   const avg = subScaleAverages[code] || 10;
                   const level = getSubScaleLevel(val, avg);
                   const traits = scaleTraits[code] || { lowAdv: [], highAdv: [] };
+                  const scaleName = traits.name || scaleLabels[code] || code;
+                  const lowLabel = traits.lowLabel || '낮을 때';
+                  const highLabel = traits.highLabel || '높을 때';
                   return (
                     <View key={code} style={styles.tableRow}>
-                      <Text style={[styles.tableCell, styles.colScaleTemp, { fontWeight: 700 }]}>{code}</Text>
+                      <Text style={[styles.tableCell, styles.colScaleTemp, { fontWeight: 700 }]}>{code}{'\n'}{scaleName}</Text>
                       <Text style={[styles.tableCell, styles.colValueTemp]}>{val}({avg})</Text>
                       <View style={[styles.colLevelTemp, { alignItems: 'center' }]}>
                         <Text style={[styles.levelBadge, getLevelStyle(level)]}>{level}</Text>
                       </View>
-                      <Text style={[styles.tableCell, styles.colTraitTemp]}>{traits.lowAdv?.join(', ') || '-'}</Text>
-                      <Text style={[styles.tableCell, styles.colTraitTemp]}>{traits.highAdv?.join(', ') || '-'}</Text>
+                      <Text style={[styles.tableCell, styles.colTraitTemp]}>[{lowLabel}]{'\n'}{traits.lowAdv?.join(', ') || '-'}</Text>
+                      <Text style={[styles.tableCell, styles.colTraitTemp]}>[{highLabel}]{'\n'}{traits.highAdv?.join(', ') || '-'}</Text>
                     </View>
                   );
                 })}
@@ -637,12 +646,15 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                 {subScaleGroups[scale].map(code => {
                   const val = person[code] || 0;
                   const traits = scaleTraits[code] || { lowAdv: [], highAdv: [] };
+                  const scaleName = traits.name || scaleLabels[code] || code;
+                  const lowLabel = traits.lowLabel || '낮을 때';
+                  const highLabel = traits.highLabel || '높을 때';
                   return (
                     <View key={code} style={styles.tableRow}>
-                      <Text style={[styles.tableCell, styles.colScaleChar, { fontWeight: 700 }]}>{code}</Text>
+                      <Text style={[styles.tableCell, styles.colScaleChar, { fontWeight: 700 }]}>{code}{'\n'}{scaleName}</Text>
                       <Text style={[styles.tableCell, styles.colValueChar]}>{val}</Text>
-                      <Text style={[styles.tableCell, styles.colTraitChar]}>{traits.lowAdv?.join(', ') || '-'}</Text>
-                      <Text style={[styles.tableCell, styles.colTraitChar]}>{traits.highAdv?.join(', ') || '-'}</Text>
+                      <Text style={[styles.tableCell, styles.colTraitChar]}>[{lowLabel}]{'\n'}{traits.lowAdv?.join(', ') || '-'}</Text>
+                      <Text style={[styles.tableCell, styles.colTraitChar]}>[{highLabel}]{'\n'}{traits.highAdv?.join(', ') || '-'}</Text>
                     </View>
                   );
                 })}
