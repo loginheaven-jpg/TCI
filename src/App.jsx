@@ -601,6 +601,15 @@ function AnalysisPage({ group, onBack }) {
   const [subTab, setSubTab] = useState('all');
   const [viewMode, setViewMode] = useState('group');
   const [compareScales, setCompareScales] = useState(['NS', 'HA']); // 산점도 비교 지표 (2개 선택)
+
+  // 메인탭 변경 시 비교지표 초기화
+  React.useEffect(() => {
+    if (mainTab === 'temperament') {
+      setCompareScales(['NS', 'HA']);
+    } else {
+      setCompareScales(['SD', 'CO']);
+    }
+  }, [mainTab]);
   const reportRef = useRef(null);
 
   const rawData = group.members;
@@ -756,13 +765,13 @@ function AnalysisPage({ group, onBack }) {
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500 font-medium">비교지표</span>
               <div className="flex gap-1">
-                {temperamentScales.map(scale => (
+                {currentScales.map(scale => (
                   <button
                     key={scale}
                     onClick={() => toggleCompareScale(scale)}
                     className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
                       compareScales.includes(scale)
-                        ? 'bg-blue-600 text-white shadow-md'
+                        ? (mainTab === 'temperament' ? 'bg-blue-600' : 'bg-emerald-600') + ' text-white shadow-md'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
@@ -787,7 +796,7 @@ function AnalysisPage({ group, onBack }) {
           {compareScales.length >= 2 ? (
             <div className="flex-1 min-h-0">
               <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 30, right: 30, bottom: 30, left: 30 }}>
+                <ScatterChart margin={{ top: 35, right: 50, bottom: 40, left: 40 }}>
                   {/* 격자선 */}
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   {/* X축 (숨김 - 데이터 매핑용) */}
@@ -925,27 +934,27 @@ function AnalysisPage({ group, onBack }) {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          {/* 강점/약점 테이블 - 새로운 레이아웃 */}
+          {/* 강점/약점 테이블 - 텍스트 확대 및 높이 50% 증가 */}
           {mainScaleTraits[scale] && (
-            <div className="px-3 pb-3 flex-shrink-0">
-              <table className="w-full text-xs border-collapse">
+            <div className="px-4 pb-4 flex-shrink-0">
+              <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr>
-                    <th className="p-1.5 text-gray-500 font-medium text-left w-16"></th>
-                    <th className="p-1.5 text-green-600 font-bold text-left">✓ bright side</th>
-                    <th className="p-1.5 text-orange-500 font-bold text-left">✗ dark side</th>
+                    <th className="p-2.5 text-gray-500 font-medium text-left w-20"></th>
+                    <th className="p-2.5 text-green-600 font-bold text-left text-base">✓ bright side</th>
+                    <th className="p-2.5 text-orange-500 font-bold text-left text-base">✗ dark side</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr className="bg-blue-50">
-                    <td className="p-1.5 font-bold text-blue-600">높을 때</td>
-                    <td className="p-1.5 text-gray-700">{mainScaleTraits[scale].highAdv.join(', ')}</td>
-                    <td className="p-1.5 text-gray-700">{mainScaleTraits[scale].highDis.join(', ')}</td>
+                    <td className="p-2.5 font-bold text-blue-600 text-base">높을 때</td>
+                    <td className="p-2.5 text-gray-700 leading-relaxed">{mainScaleTraits[scale].highAdv.join(', ')}</td>
+                    <td className="p-2.5 text-gray-700 leading-relaxed">{mainScaleTraits[scale].highDis.join(', ')}</td>
                   </tr>
                   <tr className="bg-orange-50">
-                    <td className="p-1.5 font-bold text-orange-600">낮을 때</td>
-                    <td className="p-1.5 text-gray-700">{mainScaleTraits[scale].lowAdv.join(', ')}</td>
-                    <td className="p-1.5 text-gray-700">{mainScaleTraits[scale].lowDis.join(', ')}</td>
+                    <td className="p-2.5 font-bold text-orange-600 text-base">낮을 때</td>
+                    <td className="p-2.5 text-gray-700 leading-relaxed">{mainScaleTraits[scale].lowAdv.join(', ')}</td>
+                    <td className="p-2.5 text-gray-700 leading-relaxed">{mainScaleTraits[scale].lowDis.join(', ')}</td>
                   </tr>
                 </tbody>
               </table>
@@ -972,17 +981,52 @@ function AnalysisPage({ group, onBack }) {
                       <span className="text-sm font-bold text-gray-700 bg-white px-3 py-1 rounded-full shadow-sm">{code}</span>
                       <span className="text-sm text-gray-700 font-semibold">{highLabel}</span>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       {rawData.map((p, idx) => {
                         const val = p[code] || 0;
-                        const width = (val / 20) * 100;
                         const selected = isSelected(getName(p));
+                        const isTemperament = ['NS', 'HA', 'RD', 'PS'].includes(scale);
+
+                        // Diverging bar chart for temperament (centered at mean)
+                        if (isTemperament) {
+                          const deviation = val - norm.m;
+                          const maxDev = 10; // 최대 편차 (좌우 각각)
+                          const barWidth = Math.min(Math.abs(deviation) / maxDev * 50, 50);
+                          const isPositive = deviation >= 0;
+
+                          return (
+                            <div key={getName(p)} className="flex items-center gap-3">
+                              <span className={`w-16 text-xs font-medium truncate transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
+                                {getName(p)}
+                              </span>
+                              <div className="flex-1 h-6 bg-gray-100 rounded relative overflow-hidden">
+                                {/* 중앙선 (평균) */}
+                                <div className="absolute top-0 bottom-0 w-0.5 bg-gray-400 z-10 left-1/2 transform -translate-x-1/2"></div>
+                                {/* Diverging bar */}
+                                <div
+                                  className={`absolute top-0.5 bottom-0.5 rounded transition-all duration-300 ${selected ? '' : 'opacity-20'}`}
+                                  style={{
+                                    width: `${barWidth}%`,
+                                    backgroundColor: memberColors[idx % memberColors.length],
+                                    left: isPositive ? '50%' : `${50 - barWidth}%`,
+                                  }}
+                                />
+                              </div>
+                              <span className={`w-8 text-xs text-right font-bold transition ${selected ? (deviation >= 0 ? 'text-blue-600' : 'text-orange-500') : 'text-gray-300'}`}>
+                                {deviation >= 0 ? '+' : ''}{deviation.toFixed(1)}
+                              </span>
+                            </div>
+                          );
+                        }
+
+                        // Regular bar for character scales
+                        const width = (val / 20) * 100;
                         return (
                           <div key={getName(p)} className="flex items-center gap-3">
                             <span className={`w-16 text-xs font-medium truncate transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
                               {getName(p)}
                             </span>
-                            <div className="flex-1 h-5 bg-gray-200 rounded-full relative overflow-hidden">
+                            <div className="flex-1 h-6 bg-gray-200 rounded-full relative overflow-hidden">
                               <div className="absolute top-0 bottom-0 w-0.5 bg-gray-400 z-10"
                                 style={{ left: `${(norm.m / 20) * 100}%` }}></div>
                               <div className={`h-full rounded-full transition-all duration-300 ${selected ? '' : 'opacity-20'}`}
@@ -996,7 +1040,9 @@ function AnalysisPage({ group, onBack }) {
                         );
                       })}
                     </div>
-                    <div className="text-xs text-gray-400 mt-2 text-center">평균 M={norm.m}</div>
+                    <div className="text-xs text-gray-400 mt-2 text-center">
+                      {['NS', 'HA', 'RD', 'PS'].includes(scale) ? `평균 M=${norm.m} (편차 표시)` : `평균 M=${norm.m}`}
+                    </div>
                   </div>
                 );
               })}
