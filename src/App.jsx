@@ -424,12 +424,14 @@ export default function App() {
     if (!newGroup.name || !uploadedData) return;
 
     try {
-      // 1. 그룹 생성
+      // 1. 그룹 생성 (user_id는 임시 고정값 사용 - 추후 인증 구현 시 변경)
+      const defaultUserId = '00000000-0000-0000-0000-000000000000';
       const { data: groupData, error: groupError } = await supabase
         .from('groups')
         .insert({
           name: newGroup.name,
-          description: newGroup.desc
+          description: newGroup.desc,
+          user_id: defaultUserId
         })
         .select()
         .single();
