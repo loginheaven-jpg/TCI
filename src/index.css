@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 강의용 폰트 크기 확대 (1920x1080 기준) */
+html {
+  font-size: 20px; /* 기본 16px → 20px (25% 증가) */
+}
+
 /* 커스텀 스크롤바 */
 ::-webkit-scrollbar {
   width: 6px;
@@ -27,6 +32,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6; /* 가독성 향상 */
 }
 
 /* 포커스 스타일 */

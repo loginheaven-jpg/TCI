@@ -56,6 +56,54 @@ const Custom3DBar = (props) => {
 };
 
 // ========================================
+// 이름 익명화 함수 (한글 초성 → 영문)
+// ========================================
+const CHOSUNG_LIST = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const JUNGSUNG_LIST = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+
+const CHOSUNG_MAP = {
+  'ㄱ': 'G', 'ㄲ': 'K', 'ㄴ': 'N', 'ㄷ': 'D', 'ㄸ': 'T',
+  'ㄹ': 'R', 'ㅁ': 'M', 'ㅂ': 'B', 'ㅃ': 'P', 'ㅅ': 'S',
+  'ㅆ': 'S', 'ㅇ': '', 'ㅈ': 'J', 'ㅉ': 'J', 'ㅊ': 'C',
+  'ㅋ': 'K', 'ㅌ': 'T', 'ㅍ': 'P', 'ㅎ': 'H'
+};
+
+// ㅇ(이응)인 경우 중성(모음)의 영문 표기 첫 글자 사용
+const JUNGSUNG_MAP = {
+  'ㅏ': 'A', 'ㅐ': 'AE', 'ㅑ': 'Y', 'ㅒ': 'Y', 'ㅓ': 'E',
+  'ㅔ': 'E', 'ㅕ': 'Y', 'ㅖ': 'Y', 'ㅗ': 'O', 'ㅘ': 'W',
+  'ㅙ': 'W', 'ㅚ': 'O', 'ㅛ': 'Y', 'ㅜ': 'U', 'ㅝ': 'W',
+  'ㅞ': 'W', 'ㅟ': 'W', 'ㅠ': 'Y', 'ㅡ': 'E', 'ㅢ': 'E', 'ㅣ': 'I'
+};
+
+// 한글 음절에서 영문 이니셜 추출
+const getInitial = (char) => {
+  const code = char.charCodeAt(0) - 0xAC00;
+  if (code < 0 || code > 11171) return char; // 한글 아님
+
+  const chosungIdx = Math.floor(code / 588);
+  const jungsungIdx = Math.floor((code % 588) / 28);
+  const chosung = CHOSUNG_LIST[chosungIdx];
+  const jungsung = JUNGSUNG_LIST[jungsungIdx];
+
+  // ㅇ(이응)이면 중성의 영문 표기 첫 글자 사용
+  if (chosung === 'ㅇ') {
+    const vowelInitial = JUNGSUNG_MAP[jungsung] || 'O';
+    return vowelInitial.charAt(0); // 첫 글자만
+  }
+  return CHOSUNG_MAP[chosung] || char;
+};
+
+// 이름 익명화: 성 + 이름 이니셜
+const anonymizeName = (name) => {
+  if (!name || name.length < 2) return name;
+  const surname = name.charAt(0);
+  const givenName = name.slice(1);
+  const initials = [...givenName].map(getInitial).join('');
+  return surname + initials;
+};
+
+// ========================================
 // 용어 정의 (최종 확정)
 // ========================================
 const scaleLabels = {
@@ -354,6 +402,11 @@ export default function App() {
   const [uploadedData, setUploadedData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // 이름 매칭 관련 state
+  const [nameMapping, setNameMapping] = useState([]); // [{originalName, displayName, isDuplicate}, ...]
+  const [showNameMappingModal, setShowNameMappingModal] = useState(false);
+  const [editingGroup, setEditingGroup] = useState(null); // 수정 중인 그룹
+
   // Supabase에서 그룹 데이터 로드
   const loadGroups = async () => {
     try {
@@ -384,6 +437,7 @@ export default function App() {
           const members = (membersData || []).map((m, idx) => ({
             id: idx + 1,
             name: m.name,
+            originalName: m.original_name || m.name, // 원본 이름 (없으면 name 사용)
             gender: m.gender,
             age: m.age,
             NS: m.ns, HA: m.ha, RD: m.rd, PS: m.ps,
@@ -436,10 +490,11 @@ export default function App() {
 
       if (groupError) throw groupError;
 
-      // 2. 멤버 데이터 삽입
+      // 2. 멤버 데이터 삽입 (original_name 포함)
       const membersToInsert = uploadedData.map(m => ({
         group_id: groupData.id,
         name: m.name,
+        original_name: m.originalName || m.name, // 원본 이름 저장
         gender: m.gender || null,
         age: m.age || null,
         ns: m.NS, ha: m.HA, rd: m.RD, ps: m.PS,
@@ -471,6 +526,7 @@ export default function App() {
       setGroups([newGroupObj, ...groups]);
       setNewGroup({ name: '', desc: '' });
       setUploadedData(null);
+      setNameMapping([]); // 이름 매핑 초기화
       setPage('list');
     } catch (error) {
       console.error('그룹 생성 오류:', error);
@@ -499,8 +555,10 @@ export default function App() {
             const data = results.data.map((row, idx) => {
               const obj = { id: idx + 1 };
 
-              // 이름 필드 처리 (다양한 컬럼명 지원)
-              obj.name = row.name || row['이름'] || row['Name'] || row['NAME'] || '';
+              // 이름 필드 처리 (다양한 컬럼명 지원) - 원본 이름 저장
+              const originalName = row.name || row['이름'] || row['Name'] || row['NAME'] || '';
+              obj.originalName = originalName;
+              obj.name = originalName; // 나중에 매핑 테이블에서 익명화된 이름으로 대체
 
               // 성별, 나이
               obj.gender = row.gender || row['성별'] || row['Gender'] || '';
@@ -535,6 +593,25 @@ export default function App() {
 
             if (data.length > 0) {
               setUploadedData(data);
+
+              // 이름 매핑 테이블 생성
+              const mapping = data.map(d => ({
+                originalName: d.originalName,
+                displayName: anonymizeName(d.originalName),
+                isDuplicate: false
+              }));
+
+              // 동명이인 감지
+              const displayNameCounts = {};
+              mapping.forEach(m => {
+                displayNameCounts[m.displayName] = (displayNameCounts[m.displayName] || 0) + 1;
+              });
+              mapping.forEach(m => {
+                m.isDuplicate = displayNameCounts[m.displayName] > 1;
+              });
+
+              setNameMapping(mapping);
+              setShowNameMappingModal(true);
             } else if (encoding === 'euc-kr') {
               // EUC-KR에서 데이터가 없으면 UTF-8로 재시도
               tryParse('utf-8');
@@ -639,10 +716,16 @@ export default function App() {
                         </div>
                       </div>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeleteGroup(g.id); }}
-                      className="px-4 py-2 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition opacity-0 group-hover:opacity-100">
-                      삭제
-                    </button>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                      <button onClick={(e) => { e.stopPropagation(); setEditingGroup(g); setPage('edit'); }}
+                        className="px-4 py-2 text-sm text-blue-500 border border-blue-200 rounded-lg hover:bg-blue-50 transition">
+                        수정
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteGroup(g.id); }}
+                        className="px-4 py-2 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition">
+                        삭제
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -692,16 +775,20 @@ export default function App() {
                 <p className="text-xs text-gray-400 mt-2">필수 컬럼: name, NS, HA, RD, PS, SD, CO, ST 및 하위지표</p>
               </div>
 
-              {uploadedData && (
+              {uploadedData && nameMapping.length > 0 && (
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-green-600 text-lg">✓</span>
                     <span className="text-green-700 font-semibold">{uploadedData.length}명 데이터 로드 완료</span>
                   </div>
                   <p className="text-green-600 text-sm">
-                    {uploadedData.slice(0, 5).map(d => d.name || d['이름']).join(', ')}
-                    {uploadedData.length > 5 && ` 외 ${uploadedData.length - 5}명`}
+                    {nameMapping.slice(0, 5).map(m => m.displayName).join(', ')}
+                    {nameMapping.length > 5 && ` 외 ${nameMapping.length - 5}명`}
                   </p>
+                  <button onClick={() => setShowNameMappingModal(true)}
+                    className="mt-2 text-blue-600 text-sm font-medium hover:text-blue-800">
+                    이름 매칭 확인/수정 →
+                  </button>
                 </div>
               )}
 
@@ -716,6 +803,210 @@ export default function App() {
                   그룹 생성
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 이름 매칭 모달 */}
+        {showNameMappingModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl">
+              <div className="p-6 border-b border-gray-100">
+                <h3 className="text-xl font-bold text-gray-800">이름 매칭 확인</h3>
+                <p className="text-gray-500 text-sm mt-1">원본 이름이 익명화된 표시 이름으로 변환됩니다. 필요시 수정하세요.</p>
+              </div>
+
+              <div className="p-6 overflow-y-auto" style={{ maxHeight: '50vh' }}>
+                {/* 동명이인 경고 */}
+                {nameMapping.some(m => m.isDuplicate) && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+                    <div className="flex items-center gap-2 text-amber-700 font-medium">
+                      <span>⚠️</span>
+                      <span>동명이인 감지</span>
+                    </div>
+                    <p className="text-amber-600 text-sm mt-1">
+                      {(() => {
+                        const duplicates = {};
+                        nameMapping.forEach(m => {
+                          if (m.isDuplicate) {
+                            duplicates[m.displayName] = (duplicates[m.displayName] || 0) + 1;
+                          }
+                        });
+                        return Object.entries(duplicates).map(([name, count]) => `${name} (${count}명)`).join(', ');
+                      })()}
+                      - 구분을 위해 표시 이름을 수정해주세요.
+                    </p>
+                  </div>
+                )}
+
+                {/* 매핑 테이블 */}
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-sm text-gray-500 border-b">
+                      <th className="pb-2 font-medium">#</th>
+                      <th className="pb-2 font-medium">원본 이름</th>
+                      <th className="pb-2 font-medium">표시 이름</th>
+                      <th className="pb-2 font-medium w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nameMapping.map((m, idx) => (
+                      <tr key={idx} className={`border-b border-gray-50 ${m.isDuplicate ? 'bg-amber-50' : ''}`}>
+                        <td className="py-2 text-gray-400 text-sm">{idx + 1}</td>
+                        <td className="py-2 text-gray-700">{m.originalName}</td>
+                        <td className="py-2">
+                          <input
+                            type="text"
+                            value={m.displayName}
+                            onChange={(e) => {
+                              const newMapping = [...nameMapping];
+                              newMapping[idx].displayName = e.target.value;
+                              // 동명이인 재검사
+                              const counts = {};
+                              newMapping.forEach(m => {
+                                counts[m.displayName] = (counts[m.displayName] || 0) + 1;
+                              });
+                              newMapping.forEach(m => {
+                                m.isDuplicate = counts[m.displayName] > 1;
+                              });
+                              setNameMapping(newMapping);
+                            }}
+                            className={`px-2 py-1 border rounded-lg text-sm w-32 ${m.isDuplicate ? 'border-amber-400 bg-amber-50' : 'border-gray-200'}`}
+                          />
+                        </td>
+                        <td className="py-2">
+                          {m.isDuplicate && <span className="text-amber-500">⚠️</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="p-6 border-t border-gray-100 flex gap-4">
+                <button onClick={() => setShowNameMappingModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50">
+                  취소
+                </button>
+                <button onClick={() => {
+                  // 매핑된 이름을 uploadedData에 적용
+                  const updatedData = uploadedData.map((d, idx) => ({
+                    ...d,
+                    name: nameMapping[idx].displayName
+                  }));
+                  setUploadedData(updatedData);
+                  setShowNameMappingModal(false);
+                }}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700">
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 그룹 수정 페이지
+  if (page === 'edit' && editingGroup) {
+    const editNameMapping = editingGroup.members.map(m => ({
+      originalName: m.originalName || m.original_name || m.name,
+      displayName: m.name,
+      isDuplicate: false
+    }));
+
+    // 동명이인 체크
+    const displayNameCounts = {};
+    editNameMapping.forEach(m => {
+      displayNameCounts[m.displayName] = (displayNameCounts[m.displayName] || 0) + 1;
+    });
+    editNameMapping.forEach(m => {
+      m.isDuplicate = displayNameCounts[m.displayName] > 1;
+    });
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+        <div className="max-w-3xl mx-auto">
+          <button onClick={() => { setEditingGroup(null); setPage('list'); }}
+            className="text-gray-500 hover:text-gray-700 mb-6 flex items-center gap-2 font-medium">
+            ← 목록으로 돌아가기
+          </button>
+          <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-xl">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">그룹 수정</h2>
+            <p className="text-gray-500 mb-6">{editingGroup.name}</p>
+
+            {/* 이름 매칭 테이블 */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3">이름 매칭 테이블</h3>
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr className="text-left text-sm text-gray-500">
+                      <th className="px-4 py-3 font-medium">#</th>
+                      <th className="px-4 py-3 font-medium">원본 이름</th>
+                      <th className="px-4 py-3 font-medium">표시 이름</th>
+                      <th className="px-4 py-3 font-medium w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {editingGroup.members.map((m, idx) => (
+                      <tr key={idx} className={`border-t border-gray-100 ${editNameMapping[idx]?.isDuplicate ? 'bg-amber-50' : ''}`}>
+                        <td className="px-4 py-3 text-gray-400 text-sm">{idx + 1}</td>
+                        <td className="px-4 py-3 text-gray-700">{m.originalName || m.original_name || m.name}</td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            defaultValue={m.name}
+                            onChange={(e) => {
+                              const newMembers = [...editingGroup.members];
+                              newMembers[idx] = { ...newMembers[idx], name: e.target.value };
+                              setEditingGroup({ ...editingGroup, members: newMembers });
+                            }}
+                            className={`px-2 py-1 border rounded-lg text-sm w-32 ${editNameMapping[idx]?.isDuplicate ? 'border-amber-400' : 'border-gray-200'}`}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          {editNameMapping[idx]?.isDuplicate && <span className="text-amber-500">⚠️</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button onClick={() => { setEditingGroup(null); setPage('list'); }}
+                className="flex-1 px-6 py-3 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition">
+                취소
+              </button>
+              <button onClick={async () => {
+                try {
+                  // DB에서 멤버 이름 업데이트
+                  for (const m of editingGroup.members) {
+                    const { error } = await supabase
+                      .from('members')
+                      .update({ name: m.name })
+                      .eq('group_id', editingGroup.id)
+                      .eq('original_name', m.originalName || m.original_name || m.name);
+
+                    if (error) console.error('멤버 업데이트 오류:', error);
+                  }
+
+                  // 로컬 상태 업데이트
+                  setGroups(groups.map(g => g.id === editingGroup.id ? editingGroup : g));
+                  setEditingGroup(null);
+                  setPage('list');
+                  alert('그룹이 수정되었습니다.');
+                } catch (error) {
+                  console.error('그룹 수정 오류:', error);
+                  alert('그룹 수정 중 오류가 발생했습니다.');
+                }
+              }}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition shadow-lg shadow-blue-500/25">
+                저장
+              </button>
             </div>
           </div>
         </div>
@@ -880,8 +1171,8 @@ function AnalysisPage({ group, onBack }) {
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData} outerRadius="85%" margin={{ top: 20, right: 30, bottom: 20, left: 30 }}>
                 <PolarGrid stroke="#e5e7eb" />
-                <PolarAngleAxis dataKey="scale" tick={{ fontSize: 13, fill: '#374151', fontWeight: 600 }} />
-                <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10 }} tickCount={6} />
+                <PolarAngleAxis dataKey="scale" tick={{ fontSize: 16, fill: '#374151', fontWeight: 600 }} />
+                <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 13 }} tickCount={6} />
                 {rawData.map((p, i) => (
                   <Radar key={getName(p)} name={getName(p)} dataKey={getName(p)}
                     stroke={memberColors[i % memberColors.length]}
@@ -891,7 +1182,7 @@ function AnalysisPage({ group, onBack }) {
                     strokeOpacity={isSelected(getName(p)) ? 1 : 0.1}
                   />
                 ))}
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                <Tooltip contentStyle={{ fontSize: 15, borderRadius: 8 }} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
@@ -961,31 +1252,31 @@ function AnalysisPage({ group, onBack }) {
                     y={0}
                     stroke="#6B7280"
                     strokeWidth={1.5}
-                    label={{ value: `${scaleX} (${scaleLabels[scaleX]})`, position: 'right', fontSize: 11, fill: '#374151' }}
+                    label={{ value: `${scaleX} (${scaleLabels[scaleX]})`, position: 'right', fontSize: 14, fill: '#374151' }}
                   />
                   {/* 십자가 중심축 - Y축 (세로선) */}
                   <ReferenceLine
                     x={0}
                     stroke="#6B7280"
                     strokeWidth={1.5}
-                    label={{ value: `${scaleY} (${scaleLabels[scaleY]})`, position: 'top', fontSize: 11, fill: '#374151' }}
+                    label={{ value: `${scaleY} (${scaleLabels[scaleY]})`, position: 'top', fontSize: 14, fill: '#374151' }}
                   />
                   {/* X축 눈금 표시 */}
-                  <ReferenceLine x={-50} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '0', position: 'bottom', fontSize: 10, fill: '#6B7280' }} />
-                  <ReferenceLine x={-25} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '25', position: 'bottom', fontSize: 10, fill: '#6B7280' }} />
-                  <ReferenceLine x={0} stroke="#6B7280" label={{ value: '50', position: 'bottom', fontSize: 10, fill: '#374151', fontWeight: 600 }} />
-                  <ReferenceLine x={25} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '75', position: 'bottom', fontSize: 10, fill: '#6B7280' }} />
-                  <ReferenceLine x={50} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '100', position: 'bottom', fontSize: 10, fill: '#6B7280' }} />
+                  <ReferenceLine x={-50} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '0', position: 'bottom', fontSize: 13, fill: '#6B7280' }} />
+                  <ReferenceLine x={-25} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '25', position: 'bottom', fontSize: 13, fill: '#6B7280' }} />
+                  <ReferenceLine x={0} stroke="#6B7280" label={{ value: '50', position: 'bottom', fontSize: 13, fill: '#374151', fontWeight: 600 }} />
+                  <ReferenceLine x={25} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '75', position: 'bottom', fontSize: 13, fill: '#6B7280' }} />
+                  <ReferenceLine x={50} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '100', position: 'bottom', fontSize: 13, fill: '#6B7280' }} />
                   {/* Y축 눈금 표시 */}
-                  <ReferenceLine y={-50} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '0', position: 'left', fontSize: 10, fill: '#6B7280' }} />
-                  <ReferenceLine y={-25} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '25', position: 'left', fontSize: 10, fill: '#6B7280' }} />
-                  <ReferenceLine y={0} stroke="#6B7280" label={{ value: '50', position: 'left', fontSize: 10, fill: '#374151', fontWeight: 600 }} />
-                  <ReferenceLine y={25} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '75', position: 'left', fontSize: 10, fill: '#6B7280' }} />
-                  <ReferenceLine y={50} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '100', position: 'left', fontSize: 10, fill: '#6B7280' }} />
+                  <ReferenceLine y={-50} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '0', position: 'left', fontSize: 13, fill: '#6B7280' }} />
+                  <ReferenceLine y={-25} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '25', position: 'left', fontSize: 13, fill: '#6B7280' }} />
+                  <ReferenceLine y={0} stroke="#6B7280" label={{ value: '50', position: 'left', fontSize: 13, fill: '#374151', fontWeight: 600 }} />
+                  <ReferenceLine y={25} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '75', position: 'left', fontSize: 13, fill: '#6B7280' }} />
+                  <ReferenceLine y={50} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '100', position: 'left', fontSize: 13, fill: '#6B7280' }} />
                   <ZAxis range={[100, 100]} />
                   <Tooltip
                     cursor={{ strokeDasharray: '3 3' }}
-                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                    contentStyle={{ fontSize: 15, borderRadius: 8 }}
                     formatter={(value, name, props) => {
                       if (name === 'x') return [`${props.payload.rawX}%`, scaleLabels[scaleX]];
                       if (name === 'y') return [`${props.payload.rawY}%`, scaleLabels[scaleY]];
@@ -1106,11 +1397,11 @@ function AnalysisPage({ group, onBack }) {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={mainData} margin={{ top: 10, right: 5, left: 5, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 500 }} angle={-45} textAnchor="end" interval={0} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
-                <Tooltip formatter={(v) => [`${v}%`, '백분위']} contentStyle={{ borderRadius: 8 }} />
-                <ReferenceLine y={30} stroke="#F97316" strokeDasharray="4 4" strokeWidth={2} label={{ value: '30%', position: 'right', fontSize: 10, fill: '#F97316' }} />
-                <ReferenceLine y={70} stroke="#3B82F6" strokeDasharray="4 4" strokeWidth={2} label={{ value: '70%', position: 'right', fontSize: 10, fill: '#3B82F6' }} />
+                <XAxis dataKey="name" tick={{ fontSize: 14, fontWeight: 500 }} angle={-45} textAnchor="end" interval={0} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v) => [`${v}%`, '백분위']} contentStyle={{ borderRadius: 8, fontSize: 15 }} />
+                <ReferenceLine y={30} stroke="#F97316" strokeDasharray="4 4" strokeWidth={2} label={{ value: '30%', position: 'right', fontSize: 13, fill: '#F97316' }} />
+                <ReferenceLine y={70} stroke="#3B82F6" strokeDasharray="4 4" strokeWidth={2} label={{ value: '70%', position: 'right', fontSize: 13, fill: '#3B82F6' }} />
                 <Bar dataKey="value" fill={mainColor} shape={<Custom3DBar />}>
                   {mainData.map((entry, i) => (
                     <Cell key={i}
