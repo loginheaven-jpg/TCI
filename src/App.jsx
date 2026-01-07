@@ -130,177 +130,300 @@ const subScaleLabels = {
   ST1: '창조적 자기망각', ST2: '일체감', ST3: '영성 수용'
 };
 
-// 5열 구조 장단점 데이터
+// 5열 구조 장단점 데이터 (TCI-coaching-guide 기준으로 확장)
 const scaleTraits = {
+  // ========== NS (탐색성) 하위척도 ==========
   NS1: {
+    name: '신박성',
+    lowLabel: '현재의 가치',
+    highLabel: '새로운 것의 가치',
+    description: '미지의 세계를 탐구하려는 긍정적 동기와 에너지',
     lowAdv: ['차분하고 안정적', '기존 가치 인식'],
     lowDis: ['익숙함에 안주'],
     highAdv: ['탐색적, 혁신적', '변화에 잘 적응'],
     highDis: ['싫증 잘 내는', '흥분추구']
   },
   NS2: {
+    name: '실행성',
+    lowLabel: '숙고',
+    highLabel: '시도',
+    description: '긴 생각보다 빠른 행동을 통해 배우는 직관적 접근',
     lowAdv: ['숙고하고 집중', '안정적 감정관리'],
     lowDis: ['지나친 숙고로 실기'],
     highAdv: ['과감한 결단', '기분파'],
     highDis: ['감정변화가 극적', '성급한 결정']
   },
   NS3: {
+    name: '소비성',
+    lowLabel: '절제',
+    highLabel: '향유',
+    description: '에너지와 자원을 아낌없이 투자하고 향유하는 태도',
     lowAdv: ['검소하고 절약', '리소스 관리 우수'],
     lowDis: ['인색한'],
     highAdv: ['리소스 향유', '풍성한 삶'],
     highDis: ['리소스 관리 난조', '소진 가능성']
   },
   NS4: {
+    name: '비정형성',
+    lowLabel: '체계적',
+    highLabel: '유연성',
+    description: '규칙에 얽매이지 않고 상황에 유연하게 대처하는 자유로움',
     lowAdv: ['질서정연', '준법', '조직 만족'],
     lowDis: ['답답하고 경직된', '융통성 없는'],
     highAdv: ['자유분방', '주변을 즐겁게'],
     highDis: ['분노 폭발', '법규칙 무시']
   },
+  // ========== HA (불확실성 센서) 하위척도 ==========
   HA1: {
+    name: '미래 불확실성',
+    lowLabel: '낙관적',
+    highLabel: '대비하는',
+    description: '발생 가능한 리스크를 미리 시뮬레이션하고 준비하는 능력',
     lowAdv: ['낙관적', '자신감'],
     lowDis: ['대책 없는'],
     highAdv: ['재난예측', '위험대비'],
     highDis: ['비관적 관점', '걱정 근심']
   },
   HA2: {
+    name: '상황 불확실성',
+    lowLabel: '대담한',
+    highLabel: '신중한',
+    description: '명확한 구조와 정보를 통해 안정성을 확보하려는 신중함',
     lowAdv: ['침착함', '대담함'],
     lowDis: ['문제 간과'],
     highAdv: ['상황적 위험 대응', '안전 지향'],
     highDis: ['긴장 불안', '위험 회피']
   },
   HA3: {
+    name: '대인 불확실성',
+    lowLabel: '개방적',
+    highLabel: '신중한',
+    description: '낯선 관계에 조심스럽게 접근하여 깊은 신뢰를 쌓는 태도',
     lowAdv: ['새로운 사람 잘 사귀는'],
     lowDis: ['사기당할 우려'],
     highAdv: ['사람위험 대비', '신중한 대인관계'],
     highDis: ['지나친 경계심', '사교성 부족']
   },
   HA4: {
+    name: '에너지 불확실성',
+    lowLabel: '활력 넘치는',
+    highLabel: '관리하는',
+    description: '회복과 휴식의 필요성을 민감하게 감지하는 신호 체계',
     lowAdv: ['활력이 높음', '잘 회복하는'],
     lowDis: ['오버 드라이브', '체력 과신'],
     highAdv: ['큰 병 예방', '체력관리'],
     highDis: ['활력이 낮은 느낌', '잘 지치는 느낌']
   },
+  // ========== RD (관계 민감성) 하위척도 ==========
   RD1: {
+    name: '정서적 공감',
+    lowLabel: '이성적',
+    highLabel: '공감하는',
+    description: '타인의 감정을 깊이 느끼고 공명하는 정서적 능력',
     lowAdv: ['강인하고 현실적', '감정 중립성', '객관적 태도'],
     lowDis: ['무관심하고 차가운', '감정적 유대감 부족'],
     highAdv: ['타인 감정을 잘 읽고 공감', '동정심, 이해심'],
     highDis: ['타인 감정의 소용돌이에 빠질 우려']
   },
   RD2: {
+    name: '정서적 개방',
+    lowLabel: '절제된',
+    highLabel: '개방적',
+    description: '자신의 감정을 솔직하게 표현하고 마음을 여는 사교성',
     lowAdv: ['신비감과 권위', '적정한 거리감'],
     lowDis: ['속을 모를 사람', '마음을 열지 않는'],
     highAdv: ['마음 열고 다가감', '교류와 사귐'],
     highDis: ['다른 사람의 폐쇄성에 상처받음']
   },
   RD3: {
+    name: '애착관계',
+    lowLabel: '독립지향',
+    highLabel: '밀착적',
+    description: '타인과 깊이 연결되고자 하는 관계 지향적 동기',
     lowAdv: ['독립적인', '스스로 충전되는', '거부를 잘 견디는'],
     lowDis: ['외골수', '사회접촉에서 소진'],
     highAdv: ['친밀한', '사회접촉에서 충전'],
     highDis: ['외로움에 취약한', '타인 반응에 민감']
   },
   RD4: {
+    name: '정서적 지지',
+    lowLabel: '자존지향',
+    highLabel: '협력지향',
+    description: '홀로 서기보다 함께 협력할 때 시너지를 내는 협동적 성향',
     lowAdv: ['초연히 자존함', '주관이 뚜렷한'],
     lowDis: ['눈치없는'],
     highAdv: ['눈치빠르게 상대 필요 파악', '배려와 협력'],
     highDis: ['칭찬과 비판에 과민', '의존적인']
   },
+  // ========== PS (실행 일관성) 하위척도 ==========
   PS1: {
+    name: '시작지향성',
+    lowLabel: '신중한',
+    highLabel: '적극적',
+    description: '어려움이 있어도 기꺼이 과업에 착수하는 태도',
     lowAdv: ['신중함', '철저한 준비'],
     lowDis: ['착수 지연', '미루거나 꾸물댐'],
     highAdv: ['책임감', '성실함'],
     highDis: ['조급함', '보상에 쉬 매혹되는']
   },
   PS2: {
+    name: '유지지향성',
+    lowLabel: '유연한',
+    highLabel: '끈기있는',
+    description: '피로와 좌절에도 굴하지 않고 끝까지 완주하는 힘',
     lowAdv: ['탄력적인', '변화에 잘 대응'],
     lowDis: ['게으름', '포기함'],
     highAdv: ['꾸준함', '근면성'],
     highDis: ['완고한', '변화의 결단을 피함']
   },
   PS3: {
+    name: '목표지향성',
+    lowLabel: '자족하는',
+    highLabel: '야심찬',
+    description: '높은 기준을 설정하고 최선을 다하려는 향상심',
     lowAdv: ['자족하는', '협력적인'],
     lowDis: ['목표가 없어서 능력보다 덜 성취'],
     highAdv: ['도전하는', '야심찬'],
     highDis: ['과한 경쟁심', '권력욕', '과한 희생']
   },
   PS4: {
+    name: '완벽지향성',
+    lowLabel: '실용적',
+    highLabel: '완벽추구',
+    description: '작은 디테일도 놓치지 않고 완성도를 높이려는 장인 정신',
     lowAdv: ['실용적인', '현실적인'],
     lowDis: ['목표가 낮아서 능력보다 덜 성취'],
     highAdv: ['목표가 높은', '성취품질이 높은'],
     highDis: ['무리한 기준을 고수']
   },
+  // ========== SD (자율성) 하위척도 ==========
   SD1: {
+    name: '책임감',
+    lowLabel: '상황 요인 중시',
+    highLabel: '개인 책임 중시',
+    description: '자신의 선택과 결과의 주인이 되는 태도',
     lowAdv: ['유연한 책임 귀인'],
     lowDis: ['남탓하는', '책임 전가하는'],
     highAdv: ['책임지는', '신뢰로운'],
     highDis: ['과도한 자기 비난']
   },
   SD2: {
+    name: '목적의식',
+    lowLabel: '단기 목표 지향',
+    highLabel: '장기 목표 지향',
+    description: '삶의 의미와 장기적 목표를 명확히 하는 힘',
     lowAdv: ['현재상황과 욕구충족 중심'],
     lowDis: ['목적, 의미 탐색중인'],
     highAdv: ['장기적 목표와 가치 지향', '욕구만족 지연'],
     highDis: ['지나친 미래 지향']
   },
   SD3: {
+    name: '유능감',
+    lowLabel: '자기 겸양심',
+    highLabel: '자기효능감',
+    description: '문제를 해결하고 장애물을 넘을 수 있다는 믿음',
     lowAdv: ['겸손한'],
     lowDis: ['무능감', '타인 의존'],
     highAdv: ['심리적 자원 풍부', '문제해결력', '도전의식'],
     highDis: ['자만심']
   },
   SD4: {
+    name: '자기수용',
+    lowLabel: '개선지향',
+    highLabel: '자기 존중',
+    description: '있는 그대로의 자신(장단점 포함)을 긍정하는 태도',
     lowAdv: ['훈련과 노력을 통한 한계 돌파'],
     lowDis: ['힘겹게 분투중인', '타인 모습을 꿈꾸는'],
     highAdv: ['자신의 단점과 한계 인정', '가장없이 본인을 드러냄'],
     highDis: ['변화 동기 부족']
   },
   SD5: {
+    name: '일치된 천성',
+    lowLabel: '상황 적응적',
+    highLabel: '가치 일치적',
+    description: '긍정적 행동이 노력 없이도 자연스럽게 체화된 상태',
     lowAdv: ['상황에 유연하게 적응'],
     lowDis: ['유혹에 굴복', '마음따로 몸따로'],
     highAdv: ['자신의 가치에 부합하는 행동', '좋은 습관'],
     highDis: ['경직된 원칙주의']
   },
+  // ========== CO (협력성) 하위척도 ==========
   CO1: {
+    name: '타인수용',
+    lowLabel: '비판적',
+    highLabel: '수용적',
+    description: '나와 다른 타인을 있는 그대로 받아들이는 포용력',
     lowAdv: ['비판적 사고'],
     lowDis: ['자신과 다른 가치 수용않음', '자기 중심적'],
     highAdv: ['타인의 가치와 목표 존중', '관대하고 우호적'],
     highDis: ['무비판적 수용']
   },
   CO2: {
+    name: '공감',
+    lowLabel: '객관적',
+    highLabel: '공감하는',
+    description: '타인의 고통과 기쁨을 내 것처럼 느끼는 능력',
     lowAdv: ['객관적 판단'],
     lowDis: ['타인 감정에 대한 배려 부족'],
     highAdv: ['역지사지', '타인 감정 존중'],
     highDis: ['감정적 소진']
   },
   CO3: {
+    name: '이타성',
+    lowLabel: '자기 보호적',
+    highLabel: '헌신적',
+    description: '타인의 이익을 위해 기꺼이 돕는 봉사 정신',
     lowAdv: ['자기 보호'],
     lowDis: ['이기적', '자신을 돋보이고 싶어함'],
     highAdv: ['이타적', '격려와 위로', '팀웍 선호'],
     highDis: ['자기 희생']
   },
   CO4: {
+    name: '관대함',
+    lowLabel: '정의 지향',
+    highLabel: '자비 지향',
+    description: '타인의 실수나 허물을 너그럽게 감싸는 마음',
     lowAdv: ['정의감'],
     lowDis: ['복수의 화신'],
     highAdv: ['동정심과 자비심', '용서하고 관대함'],
     highDis: ['지나친 관용']
   },
   CO5: {
+    name: '공평',
+    lowLabel: '실용적',
+    highLabel: '원칙적',
+    description: '편파적이지 않고 공정하게 대하려는 정의감',
     lowAdv: ['실용적 판단'],
     lowDis: ['기회주의적', '편파적'],
     highAdv: ['윤리적 원칙과 양심 통합', '일관되고 공정함'],
     highDis: ['융통성 부족']
   },
+  // ========== ST (자기초월) 하위척도 ==========
   ST1: {
+    name: '창조적 자기망각',
+    lowLabel: '현실 집중',
+    highLabel: '몰입',
+    description: '시공간을 잊을 정도로 무언가에 깊이 빠져드는 경험',
     lowAdv: ['늘 깨어 있는', '감동에 빠지지 않는'],
     lowDis: ['무미건조'],
     highAdv: ['자기경계를 초월', '몰입', '창조적, 독창적'],
     highDis: ['현실감각 저하']
   },
   ST2: {
+    name: '일체감',
+    lowLabel: '개인주의',
+    highLabel: '연결감',
+    description: '자연, 우주, 타인과 내가 연결되어 있음을 느끼는 감각',
     lowAdv: ['개인주의', '현실 집중'],
     lowDis: ['자연을 도구로 봄'],
     highAdv: ['개인을 초월한 연결감', '이상주의'],
     highDis: ['비현실적 기대']
   },
   ST3: {
+    name: '영성 수용',
+    lowLabel: '현실중심',
+    highLabel: '초월지향',
+    description: '물질 너머의 의미와 보이지 않는 가치를 믿고 따르는 태도',
     lowAdv: ['유물론, 경험주의'],
     lowDis: ['설명할 수 없는 상황 대처 곤란'],
     highAdv: ['초감각적 영적 세계에 대한 믿음', '회복력 높음'],
