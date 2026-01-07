@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ReferenceLine, Cell, ScatterChart, Scatter, ZAxis } from 'recharts';
 import Papa from 'papaparse';
 import { supabase } from './supabaseClient';
+import { pdf } from '@react-pdf/renderer';
+import PDFReport from './components/PDFReport';
 import {
   TEMPERAMENT_TYPES,
   CHARACTER_TYPES,
@@ -1102,43 +1104,121 @@ function AnalysisPage({ group, onBack }) {
     ...Object.fromEntries(rawData.map(p => [getName(p), p[s]]))
   }));
 
-  // PDF 다운로드 (개인 리포트용 - 단일 선택 시만)
+  // PDF 다운로드 (개인 리포트용)
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const [batchPdfProgress, setBatchPdfProgress] = useState({ current: 0, total: 0, name: '' });
 
-  const handleDownloadPDF = async () => {
-    if (!reportRef.current || selectedPersons.size !== 1) return;
+  // 단일 PDF 생성 함수
+  const generatePDF = async (person, reportType = 'full') => {
+    const nsLevel = getTScoreLevel(person.NS);
+    const haLevel = getTScoreLevel(person.HA);
+    const rdLevel = getTScoreLevel(person.RD);
+    const sdLevel = getTScoreLevel(person.SD);
+    const coLevel = getTScoreLevel(person.CO);
+    const stLevel = getTScoreLevel(person.ST);
+
+    const tempTypeCode = `${nsLevel}${haLevel}${rdLevel}`;
+    const charTypeCode = `${sdLevel}${coLevel}${stLevel}`;
+    const tempType = TEMPERAMENT_TYPES[tempTypeCode];
+    const charType = CHARACTER_TYPES[charTypeCode];
+
+    const interactionsData = [
+      { key: 'NS-HA', code: `${nsLevel}${haLevel}`, label: 'NS × HA', data: TEMPERAMENT_INTERACTIONS['NS-HA']?.combinations?.[`${nsLevel}${haLevel}`] },
+      { key: 'NS-RD', code: `${nsLevel}${rdLevel}`, label: 'NS × RD', data: TEMPERAMENT_INTERACTIONS['NS-RD']?.combinations?.[`${nsLevel}${rdLevel}`] },
+      { key: 'HA-RD', code: `${haLevel}${rdLevel}`, label: 'HA × RD', data: TEMPERAMENT_INTERACTIONS['HA-RD']?.combinations?.[`${haLevel}${rdLevel}`] }
+    ];
+
+    const tips = [];
+    if (tempType?.coachingTips) tips.push({ type: '기질', tip: tempType.coachingTips });
+    if (charType?.coachingTips) tips.push({ type: '성격', tip: charType.coachingTips });
+
+    const blob = await pdf(
+      <PDFReport
+        person={person}
+        tempType={tempType}
+        charType={charType}
+        tempTypeCode={tempTypeCode}
+        charTypeCode={charTypeCode}
+        scaleTraits={scaleTraits}
+        interactions={interactionsData}
+        coachingTips={tips}
+        reportType={reportType}
+      />
+    ).toBlob();
+
+    return blob;
+  };
+
+  // 단일 PDF 다운로드
+  const handleDownloadPDF = async (reportType = 'full') => {
+    if (selectedPersons.size !== 1) return;
+    setShowPdfModal(false);
 
     const selectedName = Array.from(selectedPersons)[0];
+    const person = rawData.find(p => getName(p) === selectedName);
+    if (!person) return;
+
     setPdfLoading(true);
 
     try {
-      // html2pdf 동적 로드
-      const html2pdf = (await import('html2pdf.js')).default;
-
-      const element = reportRef.current;
-      const opt = {
-        margin: [10, 10, 10, 10],
-        filename: `TCI_${selectedName}_리포트.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          logging: false,
-          scrollY: 0,
-          windowHeight: element.scrollHeight,
-          height: element.scrollHeight
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: 'avoid-all' }
-      };
-
-      await html2pdf().set(opt).from(element).save();
+      const blob = await generatePDF(person, reportType);
+      const suffix = reportType === 'indicators' ? '지표' : '전체';
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `TCI_${selectedName}_${suffix}리포트.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('PDF 생성 오류:', error);
-      alert('PDF 생성 중 오류가 발생했습니다.');
+      alert('PDF 생성 중 오류가 발생했습니다: ' + error.message);
     } finally {
       setPdfLoading(false);
+    }
+  };
+
+  // 복수 선택 일괄 PDF 다운로드
+  const handleBatchDownloadPDF = async (reportType = 'full') => {
+    if (selectedPersons.size < 1) return;
+    setShowPdfModal(false);
+
+    const selectedNames = Array.from(selectedPersons);
+    const total = selectedNames.length;
+
+    setPdfLoading(true);
+    setBatchPdfProgress({ current: 0, total, name: '' });
+
+    try {
+      for (let i = 0; i < selectedNames.length; i++) {
+        const name = selectedNames[i];
+        const person = rawData.find(p => getName(p) === name);
+        if (!person) continue;
+
+        setBatchPdfProgress({ current: i + 1, total, name });
+
+        const blob = await generatePDF(person, reportType);
+        const suffix = reportType === 'indicators' ? '지표' : '전체';
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `TCI_${name}_${suffix}리포트.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        // 브라우저가 다운로드 처리할 시간 확보
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    } catch (error) {
+      console.error('PDF 일괄 생성 오류:', error);
+      alert('PDF 생성 중 오류가 발생했습니다: ' + error.message);
+    } finally {
+      setPdfLoading(false);
+      setBatchPdfProgress({ current: 0, total: 0, name: '' });
     }
   };
 
@@ -1523,7 +1603,23 @@ function AnalysisPage({ group, onBack }) {
     if (selectedPersons.size > 1) {
       return (
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-          <h3 className="text-xl font-bold text-gray-800 mb-6">선택된 참가자 비교 ({selectedPersons.size}명)</h3>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-gray-800">선택된 참가자 비교 ({selectedPersons.size}명)</h3>
+            <button
+              onClick={() => setShowPdfModal(true)}
+              disabled={pdfLoading}
+              className={`px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition text-sm font-medium flex items-center gap-2 ${pdfLoading ? 'opacity-50 cursor-wait' : ''}`}
+            >
+              {pdfLoading ? (
+                <>
+                  <span className="animate-spin">⏳</span>
+                  {batchPdfProgress.total > 0 ? `${batchPdfProgress.current}/${batchPdfProgress.total}` : 'PDF 생성 중...'}
+                </>
+              ) : (
+                <>📄 PDF 일괄 다운로드</>
+              )}
+            </button>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             {Array.from(selectedPersons).map(name => {
               const person = rawData.find(p => getName(p) === name);
@@ -1608,7 +1704,7 @@ function AnalysisPage({ group, onBack }) {
               </div>
             </div>
             <button
-              onClick={handleDownloadPDF}
+              onClick={() => setShowPdfModal(true)}
               disabled={pdfLoading}
               className={`px-6 py-3 bg-white/20 rounded-xl hover:bg-white/30 transition text-sm font-medium backdrop-blur flex items-center gap-2 ${pdfLoading ? 'opacity-50 cursor-wait' : ''}`}
             >
@@ -2001,6 +2097,42 @@ function AnalysisPage({ group, onBack }) {
           )}
         </div>
       </div>
+
+      {/* PDF 옵션 모달 */}
+      {showPdfModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowPdfModal(false)}>
+          <div className="bg-white rounded-2xl p-6 w-96 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-gray-800 mb-4">PDF 리포트 다운로드</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              {selectedPersons.size === 1
+                ? `${Array.from(selectedPersons)[0]}님의 리포트를 다운로드합니다.`
+                : `선택된 ${selectedPersons.size}명의 리포트를 일괄 다운로드합니다.`}
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => selectedPersons.size === 1 ? handleDownloadPDF('indicators') : handleBatchDownloadPDF('indicators')}
+                className="w-full px-4 py-3 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition text-left"
+              >
+                <div className="font-semibold">📊 지표 리포트</div>
+                <div className="text-xs text-blue-500 mt-1">상위지표 + 하위지표 상세 (2페이지)</div>
+              </button>
+              <button
+                onClick={() => selectedPersons.size === 1 ? handleDownloadPDF('full') : handleBatchDownloadPDF('full')}
+                className="w-full px-4 py-3 bg-indigo-50 text-indigo-700 rounded-xl hover:bg-indigo-100 transition text-left"
+              >
+                <div className="font-semibold">📄 전체 리포트</div>
+                <div className="text-xs text-indigo-500 mt-1">지표 + 유형분석 + 상호작용 + 코칭 (3페이지)</div>
+              </button>
+            </div>
+            <button
+              onClick={() => setShowPdfModal(false)}
+              className="w-full mt-4 px-4 py-2 text-gray-500 hover:text-gray-700 transition text-sm"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

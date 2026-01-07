@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.3.2",
     "@supabase/supabase-js": "^2.89.0",
     "html2pdf.js": "^0.10.1",
     "papaparse": "^5.4.1",
