@@ -506,9 +506,12 @@ export default function App() {
               obj.gender = row.gender || row['성별'] || row['Gender'] || '';
               obj.age = parseInt(row.age || row['연령'] || row['나이'] || row['Age'] || 0) || null;
 
-              // 상위 척도 (백분위)
+              // 상위 척도 (백분위) - CSV의 NSP, HAP 등에서 읽음
               ['NS', 'HA', 'RD', 'PS', 'SD', 'CO', 'ST'].forEach(scale => {
-                const val = row[scale] || row[scale.toLowerCase()] || 0;
+                // 백분위 점수 컬럼명: NSP, HAP, RDP, PSP, SDP, COP, STP
+                const percentileKey = scale + 'P';
+                const val = row[percentileKey] || row[percentileKey.toLowerCase()] ||
+                            row[scale] || row[scale.toLowerCase()] || 0;
                 obj[scale] = parseFloat(val) || 0;
               });
 
