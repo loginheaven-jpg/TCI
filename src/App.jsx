@@ -719,16 +719,16 @@ function AnalysisPage({ group, onBack }) {
     const mainData = rawData.map(p => ({ name: getName(p), value: p[scale] }));
     
     return (
-      <div className="flex gap-6">
+      <div className="flex gap-4">
         {/* 좌측: 상위지표 세로 막대 */}
-        <div className="w-2/5 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-5 py-4 border-b">
-            <h3 className="text-xl font-bold text-gray-800">{scaleLabels[scale]}</h3>
-            <p className="text-sm text-gray-500">{engLabels[scale]}</p>
+        <div className="w-[45%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b">
+            <h3 className="text-lg font-bold text-gray-800">{scaleLabels[scale]}</h3>
+            <p className="text-xs text-gray-500">{engLabels[scale]}</p>
           </div>
-          <div className="p-3">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={mainData} margin={{ top: 10, right: 5, left: 5, bottom: 45 }}>
+          <div className="p-2">
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={mainData} margin={{ top: 10, right: 5, left: 5, bottom: 50 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="name" tick={{ fontSize: 9 }} angle={-45} textAnchor="end" interval={0} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
@@ -745,41 +745,36 @@ function AnalysisPage({ group, onBack }) {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          {/* 강점/약점 테이블 */}
+          {/* 강점/약점 테이블 - 새로운 레이아웃 */}
           {mainScaleTraits[scale] && (
             <div className="px-3 pb-3">
-              <div className="grid grid-cols-2 gap-2">
-                {/* 낮을 때 */}
-                <div className="bg-orange-50 rounded-lg p-2">
-                  <div className="text-center font-bold text-orange-600 text-xs mb-1 border-b border-orange-200 pb-1">낮을 때 (↓)</div>
-                  <div className="space-y-0.5">
-                    {mainScaleTraits[scale].lowAdv.map((item, i) => (
-                      <div key={i} className="text-green-600 text-[10px]">✓ {item}</div>
-                    ))}
-                    {mainScaleTraits[scale].lowDis.map((item, i) => (
-                      <div key={i} className="text-orange-500 text-[10px]">✗ {item}</div>
-                    ))}
-                  </div>
-                </div>
-                {/* 높을 때 */}
-                <div className="bg-blue-50 rounded-lg p-2">
-                  <div className="text-center font-bold text-blue-600 text-xs mb-1 border-b border-blue-200 pb-1">높을 때 (↑)</div>
-                  <div className="space-y-0.5">
-                    {mainScaleTraits[scale].highAdv.map((item, i) => (
-                      <div key={i} className="text-green-600 text-[10px]">✓ {item}</div>
-                    ))}
-                    {mainScaleTraits[scale].highDis.map((item, i) => (
-                      <div key={i} className="text-orange-500 text-[10px]">✗ {item}</div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr>
+                    <th className="p-1.5 text-gray-500 font-medium text-left w-16"></th>
+                    <th className="p-1.5 text-green-600 font-bold text-left">✓ 강점</th>
+                    <th className="p-1.5 text-orange-500 font-bold text-left">✗ 약점</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="bg-blue-50">
+                    <td className="p-1.5 font-bold text-blue-600">높을 때</td>
+                    <td className="p-1.5 text-gray-700">{mainScaleTraits[scale].highAdv.join(', ')}</td>
+                    <td className="p-1.5 text-gray-700">{mainScaleTraits[scale].highDis.join(', ')}</td>
+                  </tr>
+                  <tr className="bg-orange-50">
+                    <td className="p-1.5 font-bold text-orange-600">낮을 때</td>
+                    <td className="p-1.5 text-gray-700">{mainScaleTraits[scale].lowAdv.join(', ')}</td>
+                    <td className="p-1.5 text-gray-700">{mainScaleTraits[scale].lowDis.join(', ')}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           )}
         </div>
 
         {/* 우측: 하위지표 가로 막대 */}
-        <div className="w-3/5 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col" style={{ maxHeight: 480 }}>
+        <div className="w-[55%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col" style={{ maxHeight: 520 }}>
           <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-5 py-4 border-b flex-shrink-0">
             <h3 className="font-bold text-gray-800">{scale} 하위지표</h3>
           </div>
