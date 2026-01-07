@@ -787,30 +787,53 @@ function AnalysisPage({ group, onBack }) {
           {compareScales.length >= 2 ? (
             <div className="flex-1 min-h-0">
               <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 30, bottom: 40, left: 40 }}>
-                  {/* 십자가 기준선 (굵게, 중앙) */}
-                  <ReferenceLine x={0} stroke="#3B82F6" strokeWidth={2} />
-                  <ReferenceLine y={0} stroke="#3B82F6" strokeWidth={2} />
+                <ScatterChart margin={{ top: 30, right: 30, bottom: 30, left: 30 }}>
                   {/* 격자선 */}
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  {/* X축 (숨김 - 데이터 매핑용) */}
                   <XAxis
                     type="number"
                     dataKey="x"
                     domain={[-50, 50]}
-                    ticks={[-50, -25, 0, 25, 50]}
-                    tick={{ fontSize: 10 }}
-                    tickFormatter={(v) => v + 50}
-                    label={{ value: `${scaleX} (${scaleLabels[scaleX]})`, position: 'bottom', offset: 15, fontSize: 12, fill: '#6B7280' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={false}
                   />
+                  {/* Y축 (숨김 - 데이터 매핑용) */}
                   <YAxis
                     type="number"
                     dataKey="y"
                     domain={[-50, 50]}
-                    ticks={[-50, -25, 0, 25, 50]}
-                    tick={{ fontSize: 10 }}
-                    tickFormatter={(v) => v + 50}
-                    label={{ value: `${scaleY} (${scaleLabels[scaleY]})`, angle: -90, position: 'left', offset: 15, fontSize: 12, fill: '#6B7280' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={false}
                   />
+                  {/* 십자가 중심축 - X축 (가로선) */}
+                  <ReferenceLine
+                    y={0}
+                    stroke="#6B7280"
+                    strokeWidth={1.5}
+                    label={{ value: `${scaleX} (${scaleLabels[scaleX]})`, position: 'right', fontSize: 11, fill: '#374151' }}
+                  />
+                  {/* 십자가 중심축 - Y축 (세로선) */}
+                  <ReferenceLine
+                    x={0}
+                    stroke="#6B7280"
+                    strokeWidth={1.5}
+                    label={{ value: `${scaleY} (${scaleLabels[scaleY]})`, position: 'top', fontSize: 11, fill: '#374151' }}
+                  />
+                  {/* X축 눈금 표시 */}
+                  <ReferenceLine x={-50} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '0', position: 'bottom', fontSize: 10, fill: '#6B7280' }} />
+                  <ReferenceLine x={-25} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '25', position: 'bottom', fontSize: 10, fill: '#6B7280' }} />
+                  <ReferenceLine x={0} stroke="#6B7280" label={{ value: '50', position: 'bottom', fontSize: 10, fill: '#374151', fontWeight: 600 }} />
+                  <ReferenceLine x={25} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '75', position: 'bottom', fontSize: 10, fill: '#6B7280' }} />
+                  <ReferenceLine x={50} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '100', position: 'bottom', fontSize: 10, fill: '#6B7280' }} />
+                  {/* Y축 눈금 표시 */}
+                  <ReferenceLine y={-50} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '0', position: 'left', fontSize: 10, fill: '#6B7280' }} />
+                  <ReferenceLine y={-25} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '25', position: 'left', fontSize: 10, fill: '#6B7280' }} />
+                  <ReferenceLine y={0} stroke="#6B7280" label={{ value: '50', position: 'left', fontSize: 10, fill: '#374151', fontWeight: 600 }} />
+                  <ReferenceLine y={25} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '75', position: 'left', fontSize: 10, fill: '#6B7280' }} />
+                  <ReferenceLine y={50} stroke="#d1d5db" strokeDasharray="3 3" label={{ value: '100', position: 'left', fontSize: 10, fill: '#6B7280' }} />
                   <ZAxis range={[100, 100]} />
                   <Tooltip
                     cursor={{ strokeDasharray: '3 3' }}
@@ -874,18 +897,18 @@ function AnalysisPage({ group, onBack }) {
   const renderScaleDetail = (scale) => {
     const subCodes = subScaleGroups[scale];
     const mainData = rawData.map(p => ({ name: getName(p), value: p[scale] }));
-    
+
     return (
-      <div className="flex gap-4">
+      <div className="flex gap-4 h-full">
         {/* 좌측: 상위지표 세로 막대 */}
-        <div className="w-[45%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b">
+        <div className="w-[45%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b flex-shrink-0">
             <h3 className="text-lg font-bold text-gray-800">{scaleLabels[scale]}</h3>
             <p className="text-xs text-gray-500">{engLabels[scale]}</p>
           </div>
-          <div className="p-2">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={mainData} margin={{ top: 10, right: 5, left: 5, bottom: 50 }}>
+          <div className="flex-1 min-h-0 p-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={mainData} margin={{ top: 10, right: 5, left: 5, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 500 }} angle={-45} textAnchor="end" interval={0} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
@@ -904,7 +927,7 @@ function AnalysisPage({ group, onBack }) {
           </div>
           {/* 강점/약점 테이블 - 새로운 레이아웃 */}
           {mainScaleTraits[scale] && (
-            <div className="px-3 pb-3">
+            <div className="px-3 pb-3 flex-shrink-0">
               <table className="w-full text-xs border-collapse">
                 <thead>
                   <tr>
@@ -931,11 +954,11 @@ function AnalysisPage({ group, onBack }) {
         </div>
 
         {/* 우측: 하위지표 가로 막대 */}
-        <div className="w-[55%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col" style={{ maxHeight: 520 }}>
+        <div className="w-[55%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
           <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-5 py-4 border-b flex-shrink-0">
             <h3 className="font-bold text-gray-800">{scale} 하위지표</h3>
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 min-h-0">
             <div className="space-y-5">
               {subCodes.map(code => {
                 const norm = norms[code];
@@ -960,7 +983,7 @@ function AnalysisPage({ group, onBack }) {
                               {getName(p)}
                             </span>
                             <div className="flex-1 h-5 bg-gray-200 rounded-full relative overflow-hidden">
-                              <div className="absolute top-0 bottom-0 w-0.5 bg-gray-400 z-10" 
+                              <div className="absolute top-0 bottom-0 w-0.5 bg-gray-400 z-10"
                                 style={{ left: `${(norm.m / 20) * 100}%` }}></div>
                               <div className={`h-full rounded-full transition-all duration-300 ${selected ? '' : 'opacity-20'}`}
                                 style={{ width: `${Math.min(width, 100)}%`, backgroundColor: memberColors[idx % memberColors.length] }}>
