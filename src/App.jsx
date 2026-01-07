@@ -600,6 +600,7 @@ function AnalysisPage({ group, onBack }) {
   const [mainTab, setMainTab] = useState('temperament');
   const [subTab, setSubTab] = useState('all');
   const [viewMode, setViewMode] = useState('group');
+  const [compareScales, setCompareScales] = useState(['NS', 'HA']); // 산점도 비교 지표 (2개 선택)
   const reportRef = useRef(null);
 
   const rawData = group.members;
@@ -634,6 +635,25 @@ function AnalysisPage({ group, onBack }) {
   const isSelected = (name) => {
     if (selectedPersons.size === 0) return true;
     return selectedPersons.has(name);
+  };
+
+  // ★ 비교지표 토글 (2개만 선택 가능)
+  const toggleCompareScale = (scale) => {
+    setCompareScales(prev => {
+      if (prev.includes(scale)) {
+        // 이미 선택된 경우 제거 (최소 1개는 유지)
+        if (prev.length > 1) {
+          return prev.filter(s => s !== scale);
+        }
+        return prev;
+      } else {
+        // 새로 선택 - 2개 초과 시 첫번째 것 제거
+        if (prev.length >= 2) {
+          return [...prev.slice(1), scale];
+        }
+        return [...prev, scale];
+      }
+    });
   };
 
   // 거미줄 차트 데이터
@@ -682,20 +702,23 @@ function AnalysisPage({ group, onBack }) {
 
   // 거미줄 차트 + 산점도 차트
   const renderRadarChart = () => {
-    // NS×HA 산점도 데이터
+    // 선택된 2개 지표로 산점도 데이터 생성
+    const [scaleX, scaleY] = compareScales.length >= 2 ? compareScales : ['NS', 'HA'];
     const scatterData = rawData.map((p, i) => ({
       name: getName(p),
-      NS: p.NS,
-      HA: p.HA,
+      x: p[scaleX] - 50, // 50을 기준으로 -50 ~ +50 범위로 변환
+      y: p[scaleY] - 50,
+      rawX: p[scaleX],
+      rawY: p[scaleY],
       colorIdx: i,
       selected: isSelected(getName(p))
     }));
 
     return (
-      <div className="flex gap-4">
+      <div className="flex gap-4 pr-2">
         {/* 좌측: 거미줄 차트 */}
-        <div className="w-1/2 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-2">
+        <div className="w-1/2 bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-1">
             <h3 className="text-base font-bold text-gray-800">
               {mainTab === 'temperament' ? '기질' : '성격'} 프로파일
             </h3>
@@ -705,8 +728,8 @@ function AnalysisPage({ group, onBack }) {
               </span>
             )}
           </div>
-          <ResponsiveContainer width="100%" height={440}>
-            <RadarChart data={radarData} outerRadius="75%" margin={{ top: 15, right: 25, bottom: 15, left: 25 }}>
+          <ResponsiveContainer width="100%" height={400}>
+            <RadarChart data={radarData} outerRadius="78%" margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
               <PolarGrid stroke="#e5e7eb" />
               <PolarAngleAxis dataKey="scale" tick={{ fontSize: 12, fill: '#374151', fontWeight: 600 }} />
               <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 9 }} tickCount={6} />
@@ -724,99 +747,120 @@ function AnalysisPage({ group, onBack }) {
           </ResponsiveContainer>
         </div>
 
-        {/* 우측: NS×HA 산점도 차트 */}
-        <div className="w-1/2 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+        {/* 우측: 산점도 차트 */}
+        <div className="w-1/2 bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
+          {/* 비교지표 선택 버튼 */}
           <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 font-medium">비교지표</span>
+              <div className="flex gap-1">
+                {temperamentScales.map(scale => (
+                  <button
+                    key={scale}
+                    onClick={() => toggleCompareScale(scale)}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition ${
+                      compareScales.includes(scale)
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {scale}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <span className="text-xs text-gray-400">
+              {compareScales.length < 2 ? '2개 선택 필요' : `${scaleX} × ${scaleY}`}
+            </span>
+          </div>
+
+          {/* 산점도 타이틀 */}
+          <div className="flex items-center justify-between mb-1">
             <h3 className="text-base font-bold text-gray-800">
-              NS × HA 분포
+              {scaleX} × {scaleY} 분포
             </h3>
-            <span className="text-xs text-gray-500">탐색성 × 신중성</span>
+            <span className="text-xs text-gray-500">{scaleLabels[scaleX]} × {scaleLabels[scaleY]}</span>
           </div>
-          <ResponsiveContainer width="100%" height={440}>
-            <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis
-                type="number"
-                dataKey="NS"
-                domain={[0, 100]}
-                name="NS (탐색성)"
-                tick={{ fontSize: 10 }}
-                label={{ value: 'NS (탐색성)', position: 'bottom', fontSize: 12, fill: '#6B7280' }}
-              />
-              <YAxis
-                type="number"
-                dataKey="HA"
-                domain={[0, 100]}
-                name="HA (신중성)"
-                tick={{ fontSize: 10 }}
-                label={{ value: 'HA (신중성)', angle: -90, position: 'left', fontSize: 12, fill: '#6B7280' }}
-              />
-              <ZAxis range={[100, 100]} />
-              {/* 사분면 기준선 */}
-              <ReferenceLine x={50} stroke="#93C5FD" strokeDasharray="4 4" strokeWidth={1.5} />
-              <ReferenceLine y={50} stroke="#93C5FD" strokeDasharray="4 4" strokeWidth={1.5} />
-              <Tooltip
-                cursor={{ strokeDasharray: '3 3' }}
-                contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                formatter={(value, name) => [`${value}%`, name === 'NS' ? '탐색성' : '신중성']}
-                labelFormatter={(label) => `${label}`}
-              />
-              <Scatter
-                name="참가자"
-                data={scatterData}
-                shape={(props) => {
-                  const { cx, cy, payload } = props;
-                  const color = memberColors[payload.colorIdx % memberColors.length];
-                  const opacity = payload.selected ? 1 : 0.2;
-                  return (
-                    <g>
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={payload.selected ? 10 : 6}
-                        fill={color}
-                        fillOpacity={opacity}
-                        stroke={color}
-                        strokeWidth={payload.selected ? 2 : 1}
-                        strokeOpacity={opacity}
-                      />
-                      {payload.selected && (
-                        <text
-                          x={cx}
-                          y={cy - 14}
-                          textAnchor="middle"
-                          fontSize={10}
-                          fill="#374151"
-                          fontWeight="600"
-                        >
-                          {payload.name}
-                        </text>
-                      )}
-                    </g>
-                  );
-                }}
-              />
-            </ScatterChart>
-          </ResponsiveContainer>
-          {/* 사분면 설명 */}
-          <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
-            <div className="text-center p-1.5 bg-blue-50 rounded-lg">
-              <span className="font-semibold text-blue-700">낮은 NS + 높은 HA</span>
-              <div className="text-gray-500">신중하고 안정적</div>
+
+          {compareScales.length >= 2 ? (
+            <ResponsiveContainer width="100%" height={350}>
+              <ScatterChart margin={{ top: 20, right: 30, bottom: 30, left: 30 }}>
+                {/* 십자가 기준선 (굵게, 중앙) */}
+                <ReferenceLine x={0} stroke="#3B82F6" strokeWidth={2} />
+                <ReferenceLine y={0} stroke="#3B82F6" strokeWidth={2} />
+                {/* 격자선 */}
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis
+                  type="number"
+                  dataKey="x"
+                  domain={[-50, 50]}
+                  ticks={[-50, -25, 0, 25, 50]}
+                  tick={{ fontSize: 9 }}
+                  tickFormatter={(v) => v + 50}
+                  label={{ value: `${scaleX} (${scaleLabels[scaleX]})`, position: 'bottom', offset: 10, fontSize: 11, fill: '#6B7280' }}
+                />
+                <YAxis
+                  type="number"
+                  dataKey="y"
+                  domain={[-50, 50]}
+                  ticks={[-50, -25, 0, 25, 50]}
+                  tick={{ fontSize: 9 }}
+                  tickFormatter={(v) => v + 50}
+                  label={{ value: `${scaleY} (${scaleLabels[scaleY]})`, angle: -90, position: 'left', offset: 10, fontSize: 11, fill: '#6B7280' }}
+                />
+                <ZAxis range={[100, 100]} />
+                <Tooltip
+                  cursor={{ strokeDasharray: '3 3' }}
+                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  formatter={(value, name, props) => {
+                    if (name === 'x') return [`${props.payload.rawX}%`, scaleLabels[scaleX]];
+                    if (name === 'y') return [`${props.payload.rawY}%`, scaleLabels[scaleY]];
+                    return [value, name];
+                  }}
+                  labelFormatter={(label, payload) => payload?.[0]?.payload?.name || ''}
+                />
+                <Scatter
+                  name="참가자"
+                  data={scatterData}
+                  shape={(props) => {
+                    const { cx, cy, payload } = props;
+                    const color = memberColors[payload.colorIdx % memberColors.length];
+                    const opacity = payload.selected ? 1 : 0.2;
+                    return (
+                      <g>
+                        <circle
+                          cx={cx}
+                          cy={cy}
+                          r={payload.selected ? 10 : 6}
+                          fill={color}
+                          fillOpacity={opacity}
+                          stroke={color}
+                          strokeWidth={payload.selected ? 2 : 1}
+                          strokeOpacity={opacity}
+                        />
+                        {payload.selected && (
+                          <text
+                            x={cx}
+                            y={cy - 14}
+                            textAnchor="middle"
+                            fontSize={10}
+                            fill="#374151"
+                            fontWeight="600"
+                          >
+                            {payload.name}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  }}
+                />
+              </ScatterChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[350px] flex items-center justify-center bg-gray-50 rounded-xl">
+              <p className="text-gray-400 text-sm">비교지표를 2개 선택하세요</p>
             </div>
-            <div className="text-center p-1.5 bg-green-50 rounded-lg">
-              <span className="font-semibold text-green-700">높은 NS + 높은 HA</span>
-              <div className="text-gray-500">탐색적이나 조심스러움</div>
-            </div>
-            <div className="text-center p-1.5 bg-orange-50 rounded-lg">
-              <span className="font-semibold text-orange-700">낮은 NS + 낮은 HA</span>
-              <div className="text-gray-500">안정적이고 대담함</div>
-            </div>
-            <div className="text-center p-1.5 bg-purple-50 rounded-lg">
-              <span className="font-semibold text-purple-700">높은 NS + 낮은 HA</span>
-              <div className="text-gray-500">적극적 탐색자</div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     );
