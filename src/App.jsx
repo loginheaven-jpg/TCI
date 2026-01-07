@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ReferenceLine, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ReferenceLine, Cell, ScatterChart, Scatter, ZAxis } from 'recharts';
 import Papa from 'papaparse';
 import {
   TEMPERAMENT_TYPES,
@@ -680,38 +680,147 @@ function AnalysisPage({ group, onBack }) {
     }
   };
 
-  // 거미줄 차트
-  const renderRadarChart = () => (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-base font-bold text-gray-800">
-          {mainTab === 'temperament' ? '기질' : '성격'} 프로파일
-        </h3>
-        {selectedPersons.size > 0 && (
-          <span className="text-sm text-blue-600 font-medium">
-            {selectedPersons.size}명 선택됨
-          </span>
-        )}
+  // 거미줄 차트 + 산점도 차트
+  const renderRadarChart = () => {
+    // NS×HA 산점도 데이터
+    const scatterData = rawData.map((p, i) => ({
+      name: getName(p),
+      NS: p.NS,
+      HA: p.HA,
+      colorIdx: i,
+      selected: isSelected(getName(p))
+    }));
+
+    return (
+      <div className="flex gap-4">
+        {/* 좌측: 거미줄 차트 */}
+        <div className="w-1/2 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-base font-bold text-gray-800">
+              {mainTab === 'temperament' ? '기질' : '성격'} 프로파일
+            </h3>
+            {selectedPersons.size > 0 && (
+              <span className="text-sm text-blue-600 font-medium">
+                {selectedPersons.size}명 선택됨
+              </span>
+            )}
+          </div>
+          <ResponsiveContainer width="100%" height={440}>
+            <RadarChart data={radarData} outerRadius="75%" margin={{ top: 15, right: 25, bottom: 15, left: 25 }}>
+              <PolarGrid stroke="#e5e7eb" />
+              <PolarAngleAxis dataKey="scale" tick={{ fontSize: 12, fill: '#374151', fontWeight: 600 }} />
+              <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 9 }} tickCount={6} />
+              {rawData.map((p, i) => (
+                <Radar key={getName(p)} name={getName(p)} dataKey={getName(p)}
+                  stroke={memberColors[i % memberColors.length]}
+                  fill={memberColors[i % memberColors.length]}
+                  fillOpacity={isSelected(getName(p)) ? 0.15 : 0.02}
+                  strokeWidth={isSelected(getName(p)) ? 2.5 : 0.5}
+                  strokeOpacity={isSelected(getName(p)) ? 1 : 0.1}
+                />
+              ))}
+              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 우측: NS×HA 산점도 차트 */}
+        <div className="w-1/2 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-base font-bold text-gray-800">
+              NS × HA 분포
+            </h3>
+            <span className="text-xs text-gray-500">탐색성 × 신중성</span>
+          </div>
+          <ResponsiveContainer width="100%" height={440}>
+            <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 40 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                type="number"
+                dataKey="NS"
+                domain={[0, 100]}
+                name="NS (탐색성)"
+                tick={{ fontSize: 10 }}
+                label={{ value: 'NS (탐색성)', position: 'bottom', fontSize: 12, fill: '#6B7280' }}
+              />
+              <YAxis
+                type="number"
+                dataKey="HA"
+                domain={[0, 100]}
+                name="HA (신중성)"
+                tick={{ fontSize: 10 }}
+                label={{ value: 'HA (신중성)', angle: -90, position: 'left', fontSize: 12, fill: '#6B7280' }}
+              />
+              <ZAxis range={[100, 100]} />
+              {/* 사분면 기준선 */}
+              <ReferenceLine x={50} stroke="#93C5FD" strokeDasharray="4 4" strokeWidth={1.5} />
+              <ReferenceLine y={50} stroke="#93C5FD" strokeDasharray="4 4" strokeWidth={1.5} />
+              <Tooltip
+                cursor={{ strokeDasharray: '3 3' }}
+                contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                formatter={(value, name) => [`${value}%`, name === 'NS' ? '탐색성' : '신중성']}
+                labelFormatter={(label) => `${label}`}
+              />
+              <Scatter
+                name="참가자"
+                data={scatterData}
+                shape={(props) => {
+                  const { cx, cy, payload } = props;
+                  const color = memberColors[payload.colorIdx % memberColors.length];
+                  const opacity = payload.selected ? 1 : 0.2;
+                  return (
+                    <g>
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={payload.selected ? 10 : 6}
+                        fill={color}
+                        fillOpacity={opacity}
+                        stroke={color}
+                        strokeWidth={payload.selected ? 2 : 1}
+                        strokeOpacity={opacity}
+                      />
+                      {payload.selected && (
+                        <text
+                          x={cx}
+                          y={cy - 14}
+                          textAnchor="middle"
+                          fontSize={10}
+                          fill="#374151"
+                          fontWeight="600"
+                        >
+                          {payload.name}
+                        </text>
+                      )}
+                    </g>
+                  );
+                }}
+              />
+            </ScatterChart>
+          </ResponsiveContainer>
+          {/* 사분면 설명 */}
+          <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+            <div className="text-center p-1.5 bg-blue-50 rounded-lg">
+              <span className="font-semibold text-blue-700">낮은 NS + 높은 HA</span>
+              <div className="text-gray-500">신중하고 안정적</div>
+            </div>
+            <div className="text-center p-1.5 bg-green-50 rounded-lg">
+              <span className="font-semibold text-green-700">높은 NS + 높은 HA</span>
+              <div className="text-gray-500">탐색적이나 조심스러움</div>
+            </div>
+            <div className="text-center p-1.5 bg-orange-50 rounded-lg">
+              <span className="font-semibold text-orange-700">낮은 NS + 낮은 HA</span>
+              <div className="text-gray-500">안정적이고 대담함</div>
+            </div>
+            <div className="text-center p-1.5 bg-purple-50 rounded-lg">
+              <span className="font-semibold text-purple-700">높은 NS + 낮은 HA</span>
+              <div className="text-gray-500">적극적 탐색자</div>
+            </div>
+          </div>
+        </div>
       </div>
-      <ResponsiveContainer width="100%" height={520}>
-        <RadarChart data={radarData}>
-          <PolarGrid stroke="#e5e7eb" />
-          <PolarAngleAxis dataKey="scale" tick={{ fontSize: 13, fill: '#374151', fontWeight: 600 }} />
-          <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10 }} tickCount={6} />
-          {rawData.map((p, i) => (
-            <Radar key={getName(p)} name={getName(p)} dataKey={getName(p)}
-              stroke={memberColors[i % memberColors.length]}
-              fill={memberColors[i % memberColors.length]}
-              fillOpacity={isSelected(getName(p)) ? 0.15 : 0.02}
-              strokeWidth={isSelected(getName(p)) ? 2.5 : 0.5}
-              strokeOpacity={isSelected(getName(p)) ? 1 : 0.1}
-            />
-          ))}
-          <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-        </RadarChart>
-      </ResponsiveContainer>
-    </div>
-  );
+    );
+  };
 
   // 개별 지표 상세
   const renderScaleDetail = (scale) => {
@@ -730,7 +839,7 @@ function AnalysisPage({ group, onBack }) {
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={mainData} margin={{ top: 10, right: 5, left: 5, bottom: 50 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 9 }} angle={-45} textAnchor="end" interval={0} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 500 }} angle={-45} textAnchor="end" interval={0} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
                 <Tooltip formatter={(v) => [`${v}%`, '백분위']} contentStyle={{ borderRadius: 8 }} />
                 <ReferenceLine y={30} stroke="#93C5FD" strokeDasharray="4 4" strokeWidth={2} />
@@ -752,8 +861,8 @@ function AnalysisPage({ group, onBack }) {
                 <thead>
                   <tr>
                     <th className="p-1.5 text-gray-500 font-medium text-left w-16"></th>
-                    <th className="p-1.5 text-green-600 font-bold text-left">✓ 강점</th>
-                    <th className="p-1.5 text-orange-500 font-bold text-left">✗ 약점</th>
+                    <th className="p-1.5 text-green-600 font-bold text-left">✓ bright side</th>
+                    <th className="p-1.5 text-orange-500 font-bold text-left">✗ dark side</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -788,9 +897,9 @@ function AnalysisPage({ group, onBack }) {
                 return (
                   <div key={code} className="bg-gray-50 rounded-xl p-4">
                     <div className="flex justify-between items-center mb-3">
-                      <span className="text-xs text-gray-500 font-medium">{lowLabel}</span>
+                      <span className="text-sm text-gray-700 font-semibold">{lowLabel}</span>
                       <span className="text-sm font-bold text-gray-700 bg-white px-3 py-1 rounded-full shadow-sm">{code}</span>
-                      <span className="text-xs text-gray-500 font-medium">{highLabel}</span>
+                      <span className="text-sm text-gray-700 font-semibold">{highLabel}</span>
                     </div>
                     <div className="space-y-2">
                       {rawData.map((p, idx) => {
