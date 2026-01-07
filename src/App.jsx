@@ -796,7 +796,7 @@ function AnalysisPage({ group, onBack }) {
           {compareScales.length >= 2 ? (
             <div className="flex-1 min-h-0">
               <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 35, right: 50, bottom: 40, left: 40 }}>
+                <ScatterChart margin={{ top: 40, right: 80, bottom: 45, left: 45 }}>
                   {/* 격자선 */}
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   {/* X축 (숨김 - 데이터 매핑용) */}
