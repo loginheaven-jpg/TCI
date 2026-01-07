@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ReferenceLine, Cell, ScatterChart, Scatter, ZAxis } from 'recharts';
 import Papa from 'papaparse';
+import { supabase } from './supabaseClient';
 import {
   TEMPERAMENT_TYPES,
   CHARACTER_TYPES,
@@ -347,26 +348,134 @@ const sampleData = [
 // ========================================
 export default function App() {
   const [page, setPage] = useState('list');
-  const [groups, setGroups] = useState([
-    { id: 1, name: 'ACC전문코치반 2501기', desc: '전문코치 양성과정 1기', members: sampleData, createdAt: '2026-01-06' }
-  ]);
+  const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [newGroup, setNewGroup] = useState({ name: '', desc: '' });
   const [uploadedData, setUploadedData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleCreateGroup = () => {
+  // Supabase에서 그룹 데이터 로드
+  const loadGroups = async () => {
+    try {
+      setLoading(true);
+
+      // 그룹 목록 가져오기
+      const { data: groupsData, error: groupsError } = await supabase
+        .from('groups')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (groupsError) throw groupsError;
+
+      // 각 그룹의 멤버 가져오기
+      const groupsWithMembers = await Promise.all(
+        (groupsData || []).map(async (group) => {
+          const { data: membersData, error: membersError } = await supabase
+            .from('members')
+            .select('*')
+            .eq('group_id', group.id);
+
+          if (membersError) {
+            console.error('멤버 로드 오류:', membersError);
+            return null;
+          }
+
+          // DB 컬럼명을 앱에서 사용하는 형식으로 변환
+          const members = (membersData || []).map((m, idx) => ({
+            id: idx + 1,
+            name: m.name,
+            gender: m.gender,
+            age: m.age,
+            NS: m.ns, HA: m.ha, RD: m.rd, PS: m.ps,
+            SD: m.sd, CO: m.co, ST: m.st,
+            NS1: m.ns1, NS2: m.ns2, NS3: m.ns3, NS4: m.ns4,
+            HA1: m.ha1, HA2: m.ha2, HA3: m.ha3, HA4: m.ha4,
+            RD1: m.rd1, RD2: m.rd2, RD3: m.rd3, RD4: m.rd4,
+            PS1: m.ps1, PS2: m.ps2, PS3: m.ps3, PS4: m.ps4,
+            SD1: m.sd1, SD2: m.sd2, SD3: m.sd3, SD4: m.sd4, SD5: m.sd5,
+            CO1: m.co1, CO2: m.co2, CO3: m.co3, CO4: m.co4, CO5: m.co5,
+            ST1: m.st1, ST2: m.st2, ST3: m.st3
+          }));
+
+          return {
+            id: group.id,
+            name: group.name,
+            desc: group.description || '',
+            members: members,
+            createdAt: group.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+          };
+        })
+      );
+
+      setGroups(groupsWithMembers.filter(g => g !== null));
+    } catch (error) {
+      console.error('그룹 로드 오류:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 데이터 로드
+  useEffect(() => {
+    loadGroups();
+  }, []);
+
+  const handleCreateGroup = async () => {
     if (!newGroup.name || !uploadedData) return;
-    const group = {
-      id: Date.now(),
-      name: newGroup.name,
-      desc: newGroup.desc,
-      members: uploadedData,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    setGroups([...groups, group]);
-    setNewGroup({ name: '', desc: '' });
-    setUploadedData(null);
-    setPage('list');
+
+    try {
+      // 1. 그룹 생성
+      const { data: groupData, error: groupError } = await supabase
+        .from('groups')
+        .insert({
+          name: newGroup.name,
+          description: newGroup.desc
+        })
+        .select()
+        .single();
+
+      if (groupError) throw groupError;
+
+      // 2. 멤버 데이터 삽입
+      const membersToInsert = uploadedData.map(m => ({
+        group_id: groupData.id,
+        name: m.name,
+        gender: m.gender || null,
+        age: m.age || null,
+        ns: m.NS, ha: m.HA, rd: m.RD, ps: m.PS,
+        sd: m.SD, co: m.CO, st: m.ST,
+        ns1: m.NS1, ns2: m.NS2, ns3: m.NS3, ns4: m.NS4,
+        ha1: m.HA1, ha2: m.HA2, ha3: m.HA3, ha4: m.HA4,
+        rd1: m.RD1, rd2: m.RD2, rd3: m.RD3, rd4: m.RD4,
+        ps1: m.PS1, ps2: m.PS2, ps3: m.PS3, ps4: m.PS4,
+        sd1: m.SD1, sd2: m.SD2, sd3: m.SD3, sd4: m.SD4, sd5: m.SD5,
+        co1: m.CO1, co2: m.CO2, co3: m.CO3, co4: m.CO4, co5: m.CO5,
+        st1: m.ST1, st2: m.ST2, st3: m.ST3
+      }));
+
+      const { error: membersError } = await supabase
+        .from('members')
+        .insert(membersToInsert);
+
+      if (membersError) throw membersError;
+
+      // 3. 로컬 상태 업데이트
+      const newGroupObj = {
+        id: groupData.id,
+        name: groupData.name,
+        desc: groupData.description || '',
+        members: uploadedData,
+        createdAt: groupData.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+      };
+
+      setGroups([newGroupObj, ...groups]);
+      setNewGroup({ name: '', desc: '' });
+      setUploadedData(null);
+      setPage('list');
+    } catch (error) {
+      console.error('그룹 생성 오류:', error);
+      alert('그룹 생성 중 오류가 발생했습니다: ' + error.message);
+    }
   };
 
   const handleFileUpload = (e) => {
@@ -452,9 +561,31 @@ export default function App() {
     tryParse('euc-kr');
   };
 
-  const handleDeleteGroup = (id) => {
+  const handleDeleteGroup = async (id) => {
     if (confirm('이 그룹을 삭제하시겠습니까?')) {
-      setGroups(groups.filter(g => g.id !== id));
+      try {
+        // 1. 먼저 멤버 삭제 (외래키 제약)
+        const { error: membersError } = await supabase
+          .from('members')
+          .delete()
+          .eq('group_id', id);
+
+        if (membersError) throw membersError;
+
+        // 2. 그룹 삭제
+        const { error: groupError } = await supabase
+          .from('groups')
+          .delete()
+          .eq('id', id);
+
+        if (groupError) throw groupError;
+
+        // 3. 로컬 상태 업데이트
+        setGroups(groups.filter(g => g.id !== id));
+      } catch (error) {
+        console.error('그룹 삭제 오류:', error);
+        alert('그룹 삭제 중 오류가 발생했습니다: ' + error.message);
+      }
     }
   };
 
@@ -474,7 +605,12 @@ export default function App() {
             </button>
           </div>
 
-          {groups.length === 0 ? (
+          {loading ? (
+            <div className="bg-white rounded-2xl p-16 text-center border border-gray-100 shadow-sm">
+              <div className="text-5xl mb-4 animate-spin">⏳</div>
+              <p className="text-gray-400 text-lg">데이터를 불러오는 중...</p>
+            </div>
+          ) : groups.length === 0 ? (
             <div className="bg-white rounded-2xl p-16 text-center border border-gray-100 shadow-sm">
               <div className="text-6xl mb-4">📊</div>
               <p className="text-gray-400 text-lg">아직 생성된 그룹이 없습니다.</p>
