@@ -913,44 +913,49 @@ function AnalysisPage({ group, onBack }) {
         <div className="w-[45%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
           {/* 헤더 + 강점/약점 카드 (차트 위로 이동) */}
           <div className="flex-shrink-0">
-            <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-4 py-3">
+            {/* 헤더: 기질=파랑, 성격=녹색 */}
+            <div className={`px-4 py-3 ${
+              ['NS', 'HA', 'RD', 'PS'].includes(scale)
+                ? 'bg-gradient-to-r from-blue-700 to-blue-800'
+                : 'bg-gradient-to-r from-emerald-700 to-emerald-800'
+            }`}>
               <h3 className="text-lg font-bold text-white">{scaleLabels[scale]}</h3>
-              <p className="text-xs text-slate-300">{engLabels[scale]}</p>
+              <p className={`text-xs ${['NS', 'HA', 'RD', 'PS'].includes(scale) ? 'text-blue-200' : 'text-emerald-200'}`}>{engLabels[scale]}</p>
             </div>
-            {/* 강점/약점 카드 - 차트 위에 배치 */}
+            {/* 강점/약점 카드 - 확대된 레이아웃 */}
             {mainScaleTraits[scale] && (
               <div className="grid grid-cols-2 gap-0 border-b border-gray-200">
                 {/* 높을 때 */}
-                <div className="bg-gradient-to-b from-blue-50 to-blue-100/50 p-3 border-r border-gray-200">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-lg">📈</span>
-                    <span className="font-bold text-blue-700 text-sm">높을 때</span>
+                <div className="bg-gradient-to-b from-blue-50 to-blue-100/50 p-4 border-r border-gray-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xl">📈</span>
+                    <span className="font-bold text-blue-700 text-base">높을 때</span>
                   </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-start gap-1.5">
-                      <span className="text-green-500 font-bold text-xs mt-0.5">✓</span>
-                      <span className="text-xs text-gray-700 leading-relaxed">{mainScaleTraits[scale].highAdv.join(', ')}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <span className="text-green-500 font-bold text-sm mt-0.5">✓</span>
+                      <span className="text-sm text-gray-700 leading-relaxed font-medium">{mainScaleTraits[scale].highAdv.join(', ')}</span>
                     </div>
-                    <div className="flex items-start gap-1.5">
-                      <span className="text-red-400 font-bold text-xs mt-0.5">✗</span>
-                      <span className="text-xs text-gray-500 leading-relaxed">{mainScaleTraits[scale].highDis.join(', ')}</span>
+                    <div className="flex items-start gap-2">
+                      <span className="text-red-400 font-bold text-sm mt-0.5">✗</span>
+                      <span className="text-sm text-gray-500 leading-relaxed">{mainScaleTraits[scale].highDis.join(', ')}</span>
                     </div>
                   </div>
                 </div>
                 {/* 낮을 때 */}
-                <div className="bg-gradient-to-b from-orange-50 to-orange-100/50 p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="text-lg">📉</span>
-                    <span className="font-bold text-orange-700 text-sm">낮을 때</span>
+                <div className="bg-gradient-to-b from-orange-50 to-orange-100/50 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xl">📉</span>
+                    <span className="font-bold text-orange-700 text-base">낮을 때</span>
                   </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-start gap-1.5">
-                      <span className="text-green-500 font-bold text-xs mt-0.5">✓</span>
-                      <span className="text-xs text-gray-700 leading-relaxed">{mainScaleTraits[scale].lowAdv.join(', ')}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <span className="text-green-500 font-bold text-sm mt-0.5">✓</span>
+                      <span className="text-sm text-gray-700 leading-relaxed font-medium">{mainScaleTraits[scale].lowAdv.join(', ')}</span>
                     </div>
-                    <div className="flex items-start gap-1.5">
-                      <span className="text-red-400 font-bold text-xs mt-0.5">✗</span>
-                      <span className="text-xs text-gray-500 leading-relaxed">{mainScaleTraits[scale].lowDis.join(', ')}</span>
+                    <div className="flex items-start gap-2">
+                      <span className="text-red-400 font-bold text-sm mt-0.5">✗</span>
+                      <span className="text-sm text-gray-500 leading-relaxed">{mainScaleTraits[scale].lowDis.join(', ')}</span>
                     </div>
                   </div>
                 </div>
