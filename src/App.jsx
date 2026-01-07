@@ -1124,10 +1124,13 @@ function AnalysisPage({ group, onBack }) {
           scale: 2,
           useCORS: true,
           letterRendering: true,
-          logging: false
+          logging: false,
+          scrollY: 0,
+          windowHeight: element.scrollHeight,
+          height: element.scrollHeight
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        pagebreak: { mode: 'avoid-all' }
       };
 
       await html2pdf().set(opt).from(element).save();
@@ -1564,6 +1567,31 @@ function AnalysisPage({ group, onBack }) {
     const getLevel = (value) => value >= 70 ? 'H' : value <= 30 ? 'L' : 'M';
     const getLevelColor = (level) => level === 'H' ? 'bg-blue-500' : level === 'L' ? 'bg-orange-400' : 'bg-gray-400';
 
+    // PDF 렌더링을 위해 변수 미리 계산 (IIFE 대신)
+    const nsLevel = getTScoreLevel(person.NS);
+    const haLevel = getTScoreLevel(person.HA);
+    const rdLevel = getTScoreLevel(person.RD);
+    const sdLevel = getTScoreLevel(person.SD);
+    const coLevel = getTScoreLevel(person.CO);
+    const stLevel = getTScoreLevel(person.ST);
+
+    const tempTypeCode = `${nsLevel}${haLevel}${rdLevel}`;
+    const tempType = TEMPERAMENT_TYPES[tempTypeCode];
+    const charTypeCode = `${sdLevel}${coLevel}${stLevel}`;
+    const charType = CHARACTER_TYPES[charTypeCode];
+
+    const maturityCheck = checkPersonalityDisorderTendency(person.SD, person.CO);
+
+    const interactions = [
+      { key: 'NS-HA', code: `${nsLevel}${haLevel}`, label: 'NS × HA', desc: '탐색성과 신중성의 상호작용' },
+      { key: 'NS-RD', code: `${nsLevel}${rdLevel}`, label: 'NS × RD', desc: '탐색성과 관계민감성의 상호작용' },
+      { key: 'HA-RD', code: `${haLevel}${rdLevel}`, label: 'HA × RD', desc: '신중성과 관계민감성의 상호작용' }
+    ];
+
+    const coachingTips = [];
+    if (tempType?.coachingTips) coachingTips.push({ type: '기질', tip: tempType.coachingTips });
+    if (charType?.coachingTips) coachingTips.push({ type: '성격', tip: charType.coachingTips });
+
     return (
       <div ref={reportRef} className="space-y-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
         {/* 헤더 */}
@@ -1619,187 +1647,147 @@ function AnalysisPage({ group, onBack }) {
         </div>
 
         {/* 성숙도 경고 (SD/CO < 30일 때만 표시) */}
-        {(() => {
-          const maturityCheck = checkPersonalityDisorderTendency(person.SD, person.CO);
-          if (!maturityCheck.warning) return null;
-
-          const isHigh = maturityCheck.severity === 'high';
-          return (
-            <div className={`rounded-2xl p-6 shadow-sm border-2 ${isHigh ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'}`}>
-              <div className="flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${isHigh ? 'bg-red-100' : 'bg-amber-100'}`}>
-                  <span className="text-2xl">⚠️</span>
-                </div>
-                <div>
-                  <h3 className={`font-bold text-lg mb-2 ${isHigh ? 'text-red-700' : 'text-amber-700'}`}>
-                    성격 성숙도 주의
-                  </h3>
-                  <p className={`text-sm ${isHigh ? 'text-red-600' : 'text-amber-600'}`}>
-                    {maturityCheck.message}
+        {maturityCheck.warning && (
+          <div className={`rounded-2xl p-6 shadow-sm border-2 ${maturityCheck.severity === 'high' ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'}`}>
+            <div className="flex items-start gap-4">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${maturityCheck.severity === 'high' ? 'bg-red-100' : 'bg-amber-100'}`}>
+                <span className="text-2xl">⚠️</span>
+              </div>
+              <div>
+                <h3 className={`font-bold text-lg mb-2 ${maturityCheck.severity === 'high' ? 'text-red-700' : 'text-amber-700'}`}>
+                  성격 성숙도 주의
+                </h3>
+                <p className={`text-sm ${maturityCheck.severity === 'high' ? 'text-red-600' : 'text-amber-600'}`}>
+                  {maturityCheck.message}
+                </p>
+                {maturityCheck.severity === 'high' && (
+                  <p className="text-sm text-red-500 mt-2">
+                    전문적인 상담이 권장됩니다.
                   </p>
-                  {isHigh && (
-                    <p className="text-sm text-red-500 mt-2">
-                      전문적인 상담이 권장됩니다.
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
             </div>
-          );
-        })()}
+          </div>
+        )}
 
         {/* 기질 유형 분석 */}
-        {(() => {
-          const nsLevel = getTScoreLevel(person.NS);
-          const haLevel = getTScoreLevel(person.HA);
-          const rdLevel = getTScoreLevel(person.RD);
-          const tempTypeCode = `${nsLevel}${haLevel}${rdLevel}`;
-          const tempType = TEMPERAMENT_TYPES[tempTypeCode];
-
-          if (!tempType) return null;
-
-          return (
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                  <span className="text-white text-lg">🧬</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-800 text-lg">기질 유형 분석</h3>
-                  <p className="text-sm text-gray-500">NS × HA × RD 조합</p>
-                </div>
-                <div className="ml-auto">
-                  <span className="px-4 py-2 bg-blue-100 text-blue-700 rounded-xl font-bold text-lg">
-                    {tempTypeCode}
-                  </span>
-                </div>
+        {tempType && (
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                <span className="text-white text-lg">🧬</span>
               </div>
-
-              <div className="bg-blue-50 rounded-xl p-5 mb-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-2xl">💡</span>
-                  <span className="font-bold text-blue-800 text-lg">{tempType.name}</span>
-                </div>
-                <p className="text-gray-700 text-sm leading-relaxed">{tempType.description}</p>
+              <div>
+                <h3 className="font-bold text-gray-800 text-lg">기질 유형 분석</h3>
+                <p className="text-sm text-gray-500">NS × HA × RD 조합</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-green-50 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-green-600">✓</span>
-                    <span className="font-semibold text-green-700">강점</span>
-                  </div>
-                  <p className="text-sm text-gray-600">{tempType.strengths}</p>
-                </div>
-                <div className="bg-orange-50 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-orange-600">!</span>
-                    <span className="font-semibold text-orange-700">주의점</span>
-                  </div>
-                  <p className="text-sm text-gray-600">{tempType.weaknesses}</p>
-                </div>
+              <div className="ml-auto">
+                <span className="px-4 py-2 bg-blue-100 text-blue-700 rounded-xl font-bold text-lg">
+                  {tempTypeCode}
+                </span>
               </div>
             </div>
-          );
-        })()}
+
+            <div className="bg-blue-50 rounded-xl p-5 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">💡</span>
+                <span className="font-bold text-blue-800 text-lg">{tempType.name}</span>
+              </div>
+              <p className="text-gray-700 text-sm leading-relaxed">{tempType.description}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-green-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-green-600">✓</span>
+                  <span className="font-semibold text-green-700">평소에는</span>
+                </div>
+                <p className="text-sm text-gray-600">{tempType.strengths}</p>
+              </div>
+              <div className="bg-orange-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-orange-600">!</span>
+                  <span className="font-semibold text-orange-700">때로는</span>
+                </div>
+                <p className="text-sm text-gray-600">{tempType.weaknesses}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 성격 유형 분석 */}
-        {(() => {
-          const sdLevel = getTScoreLevel(person.SD);
-          const coLevel = getTScoreLevel(person.CO);
-          const stLevel = getTScoreLevel(person.ST);
-          const charTypeCode = `${sdLevel}${coLevel}${stLevel}`;
-          const charType = CHARACTER_TYPES[charTypeCode];
-
-          if (!charType) return null;
-
-          return (
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                  <span className="text-white text-lg">🎭</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-800 text-lg">성격 유형 분석</h3>
-                  <p className="text-sm text-gray-500">SD × CO × ST 조합</p>
-                </div>
-                <div className="ml-auto">
-                  <span className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold text-lg">
-                    {charTypeCode}
-                  </span>
-                </div>
+        {charType && (
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                <span className="text-white text-lg">🎭</span>
               </div>
-
-              <div className="bg-emerald-50 rounded-xl p-5 mb-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-2xl">💡</span>
-                  <span className="font-bold text-emerald-800 text-lg">{charType.name}</span>
-                </div>
-                <p className="text-gray-700 text-sm leading-relaxed">{charType.description}</p>
+              <div>
+                <h3 className="font-bold text-gray-800 text-lg">성격 유형 분석</h3>
+                <p className="text-sm text-gray-500">SD × CO × ST 조합</p>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-green-50 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-green-600">✓</span>
-                    <span className="font-semibold text-green-700">강점</span>
-                  </div>
-                  <p className="text-sm text-gray-600">{charType.strengths}</p>
-                </div>
-                <div className="bg-orange-50 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-orange-600">!</span>
-                    <span className="font-semibold text-orange-700">주의점</span>
-                  </div>
-                  <p className="text-sm text-gray-600">{charType.weaknesses}</p>
-                </div>
+              <div className="ml-auto">
+                <span className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-bold text-lg">
+                  {charTypeCode}
+                </span>
               </div>
             </div>
-          );
-        })()}
+
+            <div className="bg-emerald-50 rounded-xl p-5 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">💡</span>
+                <span className="font-bold text-emerald-800 text-lg">{charType.name}</span>
+              </div>
+              <p className="text-gray-700 text-sm leading-relaxed">{charType.description}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-green-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-green-600">✓</span>
+                  <span className="font-semibold text-green-700">평소에는</span>
+                </div>
+                <p className="text-sm text-gray-600">{charType.strengths}</p>
+              </div>
+              <div className="bg-orange-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-orange-600">!</span>
+                  <span className="font-semibold text-orange-700">때로는</span>
+                </div>
+                <p className="text-sm text-gray-600">{charType.weaknesses}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 기질 상호작용 분석 */}
-        {(() => {
-          const nsLevel = getTScoreLevel(person.NS);
-          const haLevel = getTScoreLevel(person.HA);
-          const rdLevel = getTScoreLevel(person.RD);
-
-          const interactions = [
-            { key: 'NS_HA', code: `${nsLevel}${haLevel}`, label: 'NS × HA', desc: '탐색성과 신중성의 상호작용' },
-            { key: 'NS_RD', code: `${nsLevel}${rdLevel}`, label: 'NS × RD', desc: '탐색성과 관계민감성의 상호작용' },
-            { key: 'HA_RD', code: `${haLevel}${rdLevel}`, label: 'HA × RD', desc: '신중성과 관계민감성의 상호작용' }
-          ];
-
-          return (
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
-                  <span className="text-white text-lg">🔗</span>
-                </div>
-                <h3 className="font-bold text-gray-800 text-lg">기질 상호작용 분석</h3>
-              </div>
-
-              <div className="space-y-4">
-                {interactions.map(({ key, code, label, desc }) => {
-                  const interactionData = TEMPERAMENT_INTERACTIONS[key]?.[code];
-                  if (!interactionData) return null;
-
-                  return (
-                    <div key={key} className="bg-purple-50 rounded-xl p-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="px-3 py-1 bg-purple-200 text-purple-700 rounded-lg font-bold text-sm">
-                          {label}: {code}
-                        </span>
-                        <span className="text-sm text-gray-500">{desc}</span>
-                      </div>
-                      <p className="text-sm text-gray-700">{interactionData.description}</p>
-                    </div>
-                  );
-                })}
-              </div>
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+              <span className="text-white text-lg">🔗</span>
             </div>
-          );
-        })()}
+            <h3 className="font-bold text-gray-800 text-lg">기질 상호작용 분석</h3>
+          </div>
+
+          <div className="space-y-4">
+            {interactions.map(({ key, code, label, desc }) => {
+              const interactionData = TEMPERAMENT_INTERACTIONS[key]?.[code];
+              if (!interactionData) return null;
+
+              return (
+                <div key={key} className="bg-purple-50 rounded-xl p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="px-3 py-1 bg-purple-200 text-purple-700 rounded-lg font-bold text-sm">
+                      {label}: {code}
+                    </span>
+                    <span className="text-sm text-gray-500">{desc}</span>
+                  </div>
+                  <p className="text-sm text-gray-700">{interactionData.description}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {/* 하위지표 5열 테이블 */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -1868,59 +1856,39 @@ function AnalysisPage({ group, onBack }) {
         </div>
 
         {/* 코칭 가이드 */}
-        {(() => {
-          const nsLevel = getTScoreLevel(person.NS);
-          const haLevel = getTScoreLevel(person.HA);
-          const rdLevel = getTScoreLevel(person.RD);
-          const sdLevel = getTScoreLevel(person.SD);
-          const coLevel = getTScoreLevel(person.CO);
-          const stLevel = getTScoreLevel(person.ST);
-
-          const tempTypeCode = `${nsLevel}${haLevel}${rdLevel}`;
-          const charTypeCode = `${sdLevel}${coLevel}${stLevel}`;
-          const tempType = TEMPERAMENT_TYPES[tempTypeCode];
-          const charType = CHARACTER_TYPES[charTypeCode];
-
-          const tips = [];
-          if (tempType?.coachingTips) tips.push({ type: '기질', tip: tempType.coachingTips });
-          if (charType?.coachingTips) tips.push({ type: '성격', tip: charType.coachingTips });
-
-          if (tips.length === 0) return null;
-
-          return (
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 shadow-sm border border-indigo-100">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                  <span className="text-white text-lg">📋</span>
-                </div>
-                <h3 className="font-bold text-gray-800 text-lg">종합 코칭 가이드</h3>
+        {coachingTips.length > 0 && (
+          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 shadow-sm border border-indigo-100">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                <span className="text-white text-lg">📋</span>
               </div>
-
-              <div className="space-y-4">
-                {tips.map(({ type, tip }, idx) => (
-                  <div key={idx} className="bg-white rounded-xl p-4 shadow-sm">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                        type === '기질' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
-                      }`}>
-                        {type} 코칭
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-700 leading-relaxed">{tip}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-5 p-4 bg-white/50 rounded-xl">
-                <p className="text-xs text-gray-500 leading-relaxed">
-                  💡 <strong>코칭 팁:</strong> 위 가이드를 참고하여 개인의 강점을 살리고
-                  약점을 보완하는 방향으로 코칭을 진행하세요. 각 유형의 특성을 이해하고
-                  수용하는 것이 효과적인 코칭의 첫걸음입니다.
-                </p>
-              </div>
+              <h3 className="font-bold text-gray-800 text-lg">종합 코칭 가이드</h3>
             </div>
-          );
-        })()}
+
+            <div className="space-y-4">
+              {coachingTips.map(({ type, tip }, idx) => (
+                <div key={idx} className="bg-white rounded-xl p-4 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                      type === '기질' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                    }`}>
+                      {type} 코칭
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700 leading-relaxed">{tip}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 p-4 bg-white/50 rounded-xl">
+              <p className="text-xs text-gray-500 leading-relaxed">
+                💡 <strong>코칭 팁:</strong> 위 가이드를 참고하여 개인의 강점을 살리고
+                약점을 보완하는 방향으로 코칭을 진행하세요. 각 유형의 특성을 이해하고
+                수용하는 것이 효과적인 코칭의 첫걸음입니다.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* 푸터 */}
         <div className="text-center text-sm text-gray-400 py-6">
