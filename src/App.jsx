@@ -109,8 +109,8 @@ const anonymizeName = (name) => {
 // 용어 정의 (최종 확정)
 // ========================================
 const scaleLabels = {
-  NS: '탐색성', HA: '신중성', RD: '관계 민감성', PS: '실행 관성력',
-  SD: '자기 주도성', CO: '관계 협력성', ST: '초월 지향성'
+  NS: '탐색성', HA: '불확실성 센서', RD: '관계 민감성', PS: '실행 일관성',
+  SD: '자율성', CO: '협력성', ST: '자기초월'
 };
 
 const engLabels = {
@@ -119,13 +119,15 @@ const engLabels = {
 };
 
 const subScaleLabels = {
-  NS1: '안정 추구 ↔ 탐색적 흥분', NS2: '숙고성 ↔ 즉흥성', NS3: '절제 ↔ 향유', NS4: '체계성 ↔ 유연성',
-  HA1: '미래위험 센서', HA2: '불확실성 수용성 ↔ 경계성', HA3: '사회적 개방성 ↔ 신중함', HA4: '활력 ↔ 에너지 관리',
-  RD1: '정서 민감성', RD2: '정서 표현 절제 ↔ 개방', RD3: '독립적 관계 ↔ 밀착적 관계', RD4: '자립지향 ↔ 협력지향',
-  PS1: '여유 있는 실행 ↔ 꾸준한 실행', PS2: '유연함 ↔ 지속력', PS3: '현재 만족 ↔ 성취 지향', PS4: '유연 기준 ↔ 높은 기준',
-  SD1: '상황 요인 중시 ↔ 개인 책임', SD2: '단기 목표 ↔ 장기 목표', SD3: '자기 겸양심 ↔ 자기효능감', SD4: '개선지향 ↔ 자기수용', SD5: '상황 적응성 ↔ 가치 일치성',
-  CO1: '타인수용', CO2: '공감/존중', CO3: '이타성', CO4: '관대함', CO5: '공평',
-  ST1: '자기인식 ↔ 창조적 몰입', ST2: '현실 집중 ↔ 연결감 지향', ST3: '현실중심 ↔ 초월지향'
+  // 기질 하위척도 (TCI-coaching-guide 기준)
+  NS1: '신박성', NS2: '실행성', NS3: '소비성', NS4: '비정형성',
+  HA1: '미래 불확실성', HA2: '상황 불확실성', HA3: '대인 불확실성', HA4: '에너지 불확실성',
+  RD1: '정서적 공감', RD2: '정서적 개방', RD3: '애착관계', RD4: '정서적 지지',
+  PS1: '시작지향성', PS2: '유지지향성', PS3: '목표지향성', PS4: '완벽지향성',
+  // 성격 하위척도
+  SD1: '책임감', SD2: '목적의식', SD3: '유능감', SD4: '자기수용', SD5: '일치된 천성',
+  CO1: '타인수용', CO2: '공감', CO3: '이타성', CO4: '관대함', CO5: '공평',
+  ST1: '창조적 자기망각', ST2: '일체감', ST3: '영성 수용'
 };
 
 // 5열 구조 장단점 데이터
@@ -1679,9 +1681,9 @@ function AnalysisPage({ group, onBack }) {
     const maturityCheck = checkPersonalityDisorderTendency(person.SD, person.CO);
 
     const interactions = [
-      { key: 'NS-HA', code: `${nsLevel}${haLevel}`, label: 'NS × HA', desc: '탐색성과 신중성의 상호작용' },
-      { key: 'NS-RD', code: `${nsLevel}${rdLevel}`, label: 'NS × RD', desc: '탐색성과 관계민감성의 상호작용' },
-      { key: 'HA-RD', code: `${haLevel}${rdLevel}`, label: 'HA × RD', desc: '신중성과 관계민감성의 상호작용' }
+      { key: 'NS-HA', code: `${nsLevel}${haLevel}`, label: 'NS × HA', desc: '탐색성과 불확실성 센서의 상호작용' },
+      { key: 'NS-RD', code: `${nsLevel}${rdLevel}`, label: 'NS × RD', desc: '탐색성과 관계 민감성의 상호작용' },
+      { key: 'HA-RD', code: `${haLevel}${rdLevel}`, label: 'HA × RD', desc: '불확실성 센서와 관계 민감성의 상호작용' }
     ];
 
     const coachingTips = [];
