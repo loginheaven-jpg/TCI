@@ -911,10 +911,53 @@ function AnalysisPage({ group, onBack }) {
       <div className="flex gap-4 h-full">
         {/* 좌측: 상위지표 세로 막대 */}
         <div className="w-[45%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b flex-shrink-0">
-            <h3 className="text-lg font-bold text-gray-800">{scaleLabels[scale]}</h3>
-            <p className="text-xs text-gray-500">{engLabels[scale]}</p>
+          {/* 헤더 + 강점/약점 카드 (차트 위로 이동) */}
+          <div className="flex-shrink-0">
+            <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-4 py-3">
+              <h3 className="text-lg font-bold text-white">{scaleLabels[scale]}</h3>
+              <p className="text-xs text-slate-300">{engLabels[scale]}</p>
+            </div>
+            {/* 강점/약점 카드 - 차트 위에 배치 */}
+            {mainScaleTraits[scale] && (
+              <div className="grid grid-cols-2 gap-0 border-b border-gray-200">
+                {/* 높을 때 */}
+                <div className="bg-gradient-to-b from-blue-50 to-blue-100/50 p-3 border-r border-gray-200">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-lg">📈</span>
+                    <span className="font-bold text-blue-700 text-sm">높을 때</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-green-500 font-bold text-xs mt-0.5">✓</span>
+                      <span className="text-xs text-gray-700 leading-relaxed">{mainScaleTraits[scale].highAdv.join(', ')}</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-red-400 font-bold text-xs mt-0.5">✗</span>
+                      <span className="text-xs text-gray-500 leading-relaxed">{mainScaleTraits[scale].highDis.join(', ')}</span>
+                    </div>
+                  </div>
+                </div>
+                {/* 낮을 때 */}
+                <div className="bg-gradient-to-b from-orange-50 to-orange-100/50 p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-lg">📉</span>
+                    <span className="font-bold text-orange-700 text-sm">낮을 때</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-green-500 font-bold text-xs mt-0.5">✓</span>
+                      <span className="text-xs text-gray-700 leading-relaxed">{mainScaleTraits[scale].lowAdv.join(', ')}</span>
+                    </div>
+                    <div className="flex items-start gap-1.5">
+                      <span className="text-red-400 font-bold text-xs mt-0.5">✗</span>
+                      <span className="text-xs text-gray-500 leading-relaxed">{mainScaleTraits[scale].lowDis.join(', ')}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+          {/* 차트 영역 */}
           <div className="flex-1 min-h-0 p-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={mainData} margin={{ top: 10, right: 5, left: 5, bottom: 60 }}>
@@ -922,8 +965,8 @@ function AnalysisPage({ group, onBack }) {
                 <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 500 }} angle={-45} textAnchor="end" interval={0} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
                 <Tooltip formatter={(v) => [`${v}%`, '백분위']} contentStyle={{ borderRadius: 8 }} />
-                <ReferenceLine y={30} stroke="#93C5FD" strokeDasharray="4 4" strokeWidth={2} />
-                <ReferenceLine y={70} stroke="#93C5FD" strokeDasharray="4 4" strokeWidth={2} />
+                <ReferenceLine y={30} stroke="#F97316" strokeDasharray="4 4" strokeWidth={2} label={{ value: '30%', position: 'right', fontSize: 10, fill: '#F97316' }} />
+                <ReferenceLine y={70} stroke="#3B82F6" strokeDasharray="4 4" strokeWidth={2} label={{ value: '70%', position: 'right', fontSize: 10, fill: '#3B82F6' }} />
                 <Bar dataKey="value" fill={mainColor} shape={<Custom3DBar />}>
                   {mainData.map((entry, i) => (
                     <Cell key={i}
@@ -934,32 +977,6 @@ function AnalysisPage({ group, onBack }) {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          {/* 강점/약점 테이블 - 텍스트 확대 및 높이 50% 증가 */}
-          {mainScaleTraits[scale] && (
-            <div className="px-4 pb-4 flex-shrink-0">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr>
-                    <th className="p-2.5 text-gray-500 font-medium text-left w-20"></th>
-                    <th className="p-2.5 text-green-600 font-bold text-left text-base">✓ bright side</th>
-                    <th className="p-2.5 text-orange-500 font-bold text-left text-base">✗ dark side</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="bg-blue-50">
-                    <td className="p-2.5 font-bold text-blue-600 text-base">높을 때</td>
-                    <td className="p-2.5 text-gray-700 leading-relaxed">{mainScaleTraits[scale].highAdv.join(', ')}</td>
-                    <td className="p-2.5 text-gray-700 leading-relaxed">{mainScaleTraits[scale].highDis.join(', ')}</td>
-                  </tr>
-                  <tr className="bg-orange-50">
-                    <td className="p-2.5 font-bold text-orange-600 text-base">낮을 때</td>
-                    <td className="p-2.5 text-gray-700 leading-relaxed">{mainScaleTraits[scale].lowAdv.join(', ')}</td>
-                    <td className="p-2.5 text-gray-700 leading-relaxed">{mainScaleTraits[scale].lowDis.join(', ')}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
 
         {/* 우측: 하위지표 가로 막대 */}
