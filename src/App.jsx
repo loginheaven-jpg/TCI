@@ -2042,12 +2042,18 @@ function AnalysisPage({ group, onBack }) {
                         const level = pct >= 70 ? 'H' : pct <= 30 ? 'L' : 'M';
                         const traits = scaleTraits[code] || { lowAdv: [], lowDis: [], highAdv: [], highDis: [] };
                         
+                        // 레벨별 스타일: H=오른쪽 강조, L=왼쪽 강조, M=양쪽 동일
+                        const lowDisStyle = level === 'L' ? 'text-gray-700 font-semibold' : level === 'H' ? 'text-gray-300' : 'text-gray-400';
+                        const lowAdvStyle = level === 'L' ? 'text-gray-800 font-bold' : level === 'H' ? 'text-gray-300' : 'text-gray-600';
+                        const highAdvStyle = level === 'H' ? 'text-gray-800 font-bold' : level === 'L' ? 'text-gray-300' : 'text-gray-600';
+                        const highDisStyle = level === 'H' ? 'text-gray-700 font-semibold' : level === 'L' ? 'text-gray-300' : 'text-gray-400';
+
                         return (
                           <tr key={code} className="border-b border-gray-100 hover:bg-gray-50 transition">
-                            <td className="p-3 text-gray-400 align-top text-xs">
+                            <td className={`p-3 align-top text-xs ${lowDisStyle}`}>
                               {traits.lowDis.map((t, i) => <div key={i} className="mb-1">{t}</div>)}
                             </td>
-                            <td className="p-3 text-gray-600 align-top text-xs">
+                            <td className={`p-3 align-top text-xs ${lowAdvStyle}`}>
                               {traits.lowAdv.map((t, i) => <div key={i} className="mb-1">{t}</div>)}
                             </td>
                             <td className="p-3 text-center">
@@ -2059,10 +2065,10 @@ function AnalysisPage({ group, onBack }) {
                                 </span>
                               </div>
                             </td>
-                            <td className="p-3 text-gray-600 align-top text-xs">
+                            <td className={`p-3 align-top text-xs ${highAdvStyle}`}>
                               {traits.highAdv.map((t, i) => <div key={i} className="mb-1">{t}</div>)}
                             </td>
-                            <td className="p-3 text-gray-400 align-top text-xs">
+                            <td className={`p-3 align-top text-xs ${highDisStyle}`}>
                               {traits.highDis.map((t, i) => <div key={i} className="mb-1">{t}</div>)}
                             </td>
                           </tr>
