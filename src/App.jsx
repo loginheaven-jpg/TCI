@@ -715,10 +715,10 @@ function AnalysisPage({ group, onBack }) {
     }));
 
     return (
-      <div className="flex gap-4 pr-2">
+      <div className="flex gap-4 pr-2 h-full">
         {/* 좌측: 거미줄 차트 */}
-        <div className="w-1/2 bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-1">
+        <div className="w-1/2 bg-white rounded-2xl p-3 shadow-sm border border-gray-100 flex flex-col">
+          <div className="flex items-center justify-between mb-1 flex-shrink-0">
             <h3 className="text-base font-bold text-gray-800">
               {mainTab === 'temperament' ? '기질' : '성격'} 프로파일
             </h3>
@@ -728,29 +728,31 @@ function AnalysisPage({ group, onBack }) {
               </span>
             )}
           </div>
-          <ResponsiveContainer width="100%" height={400}>
-            <RadarChart data={radarData} outerRadius="78%" margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
-              <PolarGrid stroke="#e5e7eb" />
-              <PolarAngleAxis dataKey="scale" tick={{ fontSize: 12, fill: '#374151', fontWeight: 600 }} />
-              <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 9 }} tickCount={6} />
-              {rawData.map((p, i) => (
-                <Radar key={getName(p)} name={getName(p)} dataKey={getName(p)}
-                  stroke={memberColors[i % memberColors.length]}
-                  fill={memberColors[i % memberColors.length]}
-                  fillOpacity={isSelected(getName(p)) ? 0.15 : 0.02}
-                  strokeWidth={isSelected(getName(p)) ? 2.5 : 0.5}
-                  strokeOpacity={isSelected(getName(p)) ? 1 : 0.1}
-                />
-              ))}
-              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-            </RadarChart>
-          </ResponsiveContainer>
+          <div className="flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarData} outerRadius="85%" margin={{ top: 20, right: 30, bottom: 20, left: 30 }}>
+                <PolarGrid stroke="#e5e7eb" />
+                <PolarAngleAxis dataKey="scale" tick={{ fontSize: 13, fill: '#374151', fontWeight: 600 }} />
+                <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10 }} tickCount={6} />
+                {rawData.map((p, i) => (
+                  <Radar key={getName(p)} name={getName(p)} dataKey={getName(p)}
+                    stroke={memberColors[i % memberColors.length]}
+                    fill={memberColors[i % memberColors.length]}
+                    fillOpacity={isSelected(getName(p)) ? 0.15 : 0.02}
+                    strokeWidth={isSelected(getName(p)) ? 2.5 : 0.5}
+                    strokeOpacity={isSelected(getName(p)) ? 1 : 0.1}
+                  />
+                ))}
+                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* 우측: 산점도 차트 */}
-        <div className="w-1/2 bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
+        <div className="w-1/2 bg-white rounded-2xl p-3 shadow-sm border border-gray-100 flex flex-col">
           {/* 비교지표 선택 버튼 */}
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 flex-shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-500 font-medium">비교지표</span>
               <div className="flex gap-1">
@@ -775,7 +777,7 @@ function AnalysisPage({ group, onBack }) {
           </div>
 
           {/* 산점도 타이틀 */}
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-1 flex-shrink-0">
             <h3 className="text-base font-bold text-gray-800">
               {scaleX} × {scaleY} 분포
             </h3>
@@ -783,81 +785,83 @@ function AnalysisPage({ group, onBack }) {
           </div>
 
           {compareScales.length >= 2 ? (
-            <ResponsiveContainer width="100%" height={350}>
-              <ScatterChart margin={{ top: 20, right: 30, bottom: 30, left: 30 }}>
-                {/* 십자가 기준선 (굵게, 중앙) */}
-                <ReferenceLine x={0} stroke="#3B82F6" strokeWidth={2} />
-                <ReferenceLine y={0} stroke="#3B82F6" strokeWidth={2} />
-                {/* 격자선 */}
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis
-                  type="number"
-                  dataKey="x"
-                  domain={[-50, 50]}
-                  ticks={[-50, -25, 0, 25, 50]}
-                  tick={{ fontSize: 9 }}
-                  tickFormatter={(v) => v + 50}
-                  label={{ value: `${scaleX} (${scaleLabels[scaleX]})`, position: 'bottom', offset: 10, fontSize: 11, fill: '#6B7280' }}
-                />
-                <YAxis
-                  type="number"
-                  dataKey="y"
-                  domain={[-50, 50]}
-                  ticks={[-50, -25, 0, 25, 50]}
-                  tick={{ fontSize: 9 }}
-                  tickFormatter={(v) => v + 50}
-                  label={{ value: `${scaleY} (${scaleLabels[scaleY]})`, angle: -90, position: 'left', offset: 10, fontSize: 11, fill: '#6B7280' }}
-                />
-                <ZAxis range={[100, 100]} />
-                <Tooltip
-                  cursor={{ strokeDasharray: '3 3' }}
-                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                  formatter={(value, name, props) => {
-                    if (name === 'x') return [`${props.payload.rawX}%`, scaleLabels[scaleX]];
-                    if (name === 'y') return [`${props.payload.rawY}%`, scaleLabels[scaleY]];
-                    return [value, name];
-                  }}
-                  labelFormatter={(label, payload) => payload?.[0]?.payload?.name || ''}
-                />
-                <Scatter
-                  name="참가자"
-                  data={scatterData}
-                  shape={(props) => {
-                    const { cx, cy, payload } = props;
-                    const color = memberColors[payload.colorIdx % memberColors.length];
-                    const opacity = payload.selected ? 1 : 0.2;
-                    return (
-                      <g>
-                        <circle
-                          cx={cx}
-                          cy={cy}
-                          r={payload.selected ? 10 : 6}
-                          fill={color}
-                          fillOpacity={opacity}
-                          stroke={color}
-                          strokeWidth={payload.selected ? 2 : 1}
-                          strokeOpacity={opacity}
-                        />
-                        {payload.selected && (
-                          <text
-                            x={cx}
-                            y={cy - 14}
-                            textAnchor="middle"
-                            fontSize={10}
-                            fill="#374151"
-                            fontWeight="600"
-                          >
-                            {payload.name}
-                          </text>
-                        )}
-                      </g>
-                    );
-                  }}
-                />
-              </ScatterChart>
-            </ResponsiveContainer>
+            <div className="flex-1 min-h-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart margin={{ top: 20, right: 30, bottom: 40, left: 40 }}>
+                  {/* 십자가 기준선 (굵게, 중앙) */}
+                  <ReferenceLine x={0} stroke="#3B82F6" strokeWidth={2} />
+                  <ReferenceLine y={0} stroke="#3B82F6" strokeWidth={2} />
+                  {/* 격자선 */}
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    type="number"
+                    dataKey="x"
+                    domain={[-50, 50]}
+                    ticks={[-50, -25, 0, 25, 50]}
+                    tick={{ fontSize: 10 }}
+                    tickFormatter={(v) => v + 50}
+                    label={{ value: `${scaleX} (${scaleLabels[scaleX]})`, position: 'bottom', offset: 15, fontSize: 12, fill: '#6B7280' }}
+                  />
+                  <YAxis
+                    type="number"
+                    dataKey="y"
+                    domain={[-50, 50]}
+                    ticks={[-50, -25, 0, 25, 50]}
+                    tick={{ fontSize: 10 }}
+                    tickFormatter={(v) => v + 50}
+                    label={{ value: `${scaleY} (${scaleLabels[scaleY]})`, angle: -90, position: 'left', offset: 15, fontSize: 12, fill: '#6B7280' }}
+                  />
+                  <ZAxis range={[100, 100]} />
+                  <Tooltip
+                    cursor={{ strokeDasharray: '3 3' }}
+                    contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                    formatter={(value, name, props) => {
+                      if (name === 'x') return [`${props.payload.rawX}%`, scaleLabels[scaleX]];
+                      if (name === 'y') return [`${props.payload.rawY}%`, scaleLabels[scaleY]];
+                      return [value, name];
+                    }}
+                    labelFormatter={(label, payload) => payload?.[0]?.payload?.name || ''}
+                  />
+                  <Scatter
+                    name="참가자"
+                    data={scatterData}
+                    shape={(props) => {
+                      const { cx, cy, payload } = props;
+                      const color = memberColors[payload.colorIdx % memberColors.length];
+                      const opacity = payload.selected ? 1 : 0.2;
+                      return (
+                        <g>
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={payload.selected ? 10 : 6}
+                            fill={color}
+                            fillOpacity={opacity}
+                            stroke={color}
+                            strokeWidth={payload.selected ? 2 : 1}
+                            strokeOpacity={opacity}
+                          />
+                          {payload.selected && (
+                            <text
+                              x={cx}
+                              y={cy - 14}
+                              textAnchor="middle"
+                              fontSize={10}
+                              fill="#374151"
+                              fontWeight="600"
+                            >
+                              {payload.name}
+                            </text>
+                          )}
+                        </g>
+                      );
+                    }}
+                  />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
-            <div className="h-[350px] flex items-center justify-center bg-gray-50 rounded-xl">
+            <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-xl">
               <p className="text-gray-400 text-sm">비교지표를 2개 선택하세요</p>
             </div>
           )}
@@ -1453,9 +1457,9 @@ function AnalysisPage({ group, onBack }) {
         </div>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex gap-4 h-[calc(100vh-140px)]">
         {/* 참가자 목록 */}
-        <div className="w-44 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex-shrink-0">
+        <div className="w-44 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex-shrink-0 overflow-y-auto">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-bold text-gray-500 uppercase">참가자</h3>
             {selectedPersons.size > 0 && (
@@ -1487,21 +1491,21 @@ function AnalysisPage({ group, onBack }) {
         </div>
 
         {/* 메인 콘텐츠 */}
-        <div className="flex-1">
+        <div className="flex-1 flex flex-col min-h-0">
           {viewMode === 'group' ? (
             <>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-1.5 mb-3 inline-flex gap-1">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-1.5 mb-3 inline-flex gap-1 flex-shrink-0">
                 {getSubTabs().map(tab => (
                   <button key={tab.key} onClick={() => setSubTab(tab.key)}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                      subTab === tab.key 
+                      subTab === tab.key
                         ? (mainTab === 'temperament' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700')
                         : 'text-gray-500 hover:bg-gray-100'}`}>
                     {tab.label}
                   </button>
                 ))}
               </div>
-              <div>{subTab === 'all' ? renderRadarChart() : renderScaleDetail(subTab)}</div>
+              <div className="flex-1 min-h-0">{subTab === 'all' ? renderRadarChart() : renderScaleDetail(subTab)}</div>
             </>
           ) : (
             renderIndividualReport()
