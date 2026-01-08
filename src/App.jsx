@@ -1618,31 +1618,8 @@ function AnalysisPage({ group, onBack }) {
             {/* 강점/약점 카드 - 확대된 레이아웃 */}
             {mainScaleTraits[scale] && (
               <div className="grid grid-cols-2 gap-0 border-b border-gray-200">
-                {/* 높을 때 */}
-                <div className="bg-gradient-to-b from-blue-50 to-blue-100/50 p-4 border-r border-gray-200">
-                  {mainScaleTraits[scale].highPersona && (
-                    <div className="mb-3 pb-2 border-b border-blue-200">
-                      <div className="font-bold text-blue-800 text-sm">{mainScaleTraits[scale].highPersona}</div>
-                      <div className="text-xs text-blue-600 mt-0.5 leading-relaxed">{mainScaleTraits[scale].highPersonaDesc}</div>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg">📈</span>
-                    <span className="font-bold text-blue-700 text-sm">높을 때</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-500 font-bold text-xs mt-0.5">✓</span>
-                      <span className="text-xs text-gray-700 leading-relaxed font-medium">{mainScaleTraits[scale].highAdv.join(', ')}</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-red-400 font-bold text-xs mt-0.5">✗</span>
-                      <span className="text-xs text-gray-500 leading-relaxed">{mainScaleTraits[scale].highDis.join(', ')}</span>
-                    </div>
-                  </div>
-                </div>
-                {/* 낮을 때 */}
-                <div className="bg-gradient-to-b from-orange-50 to-orange-100/50 p-4">
+                {/* 낮을 때 (왼쪽) */}
+                <div className="bg-gradient-to-b from-orange-50 to-orange-100/50 p-4 border-r border-gray-200">
                   {mainScaleTraits[scale].lowPersona && (
                     <div className="mb-3 pb-2 border-b border-orange-200">
                       <div className="font-bold text-orange-800 text-sm">{mainScaleTraits[scale].lowPersona}</div>
@@ -1661,6 +1638,29 @@ function AnalysisPage({ group, onBack }) {
                     <div className="flex items-start gap-2">
                       <span className="text-red-400 font-bold text-xs mt-0.5">✗</span>
                       <span className="text-xs text-gray-500 leading-relaxed">{mainScaleTraits[scale].lowDis.join(', ')}</span>
+                    </div>
+                  </div>
+                </div>
+                {/* 높을 때 (오른쪽) */}
+                <div className="bg-gradient-to-b from-blue-50 to-blue-100/50 p-4">
+                  {mainScaleTraits[scale].highPersona && (
+                    <div className="mb-3 pb-2 border-b border-blue-200">
+                      <div className="font-bold text-blue-800 text-sm">{mainScaleTraits[scale].highPersona}</div>
+                      <div className="text-xs text-blue-600 mt-0.5 leading-relaxed">{mainScaleTraits[scale].highPersonaDesc}</div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">📈</span>
+                    <span className="font-bold text-blue-700 text-sm">높을 때</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-start gap-2">
+                      <span className="text-green-500 font-bold text-xs mt-0.5">✓</span>
+                      <span className="text-xs text-gray-700 leading-relaxed font-medium">{mainScaleTraits[scale].highAdv.join(', ')}</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-red-400 font-bold text-xs mt-0.5">✗</span>
+                      <span className="text-xs text-gray-500 leading-relaxed">{mainScaleTraits[scale].highDis.join(', ')}</span>
                     </div>
                   </div>
                 </div>
