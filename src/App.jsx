@@ -4,6 +4,7 @@ import Papa from 'papaparse';
 import { supabase } from './supabaseClient';
 import { pdf } from '@react-pdf/renderer';
 import PDFReport from './components/PDFReport';
+import SettingsPage from './components/SettingsPage';
 import {
   TEMPERAMENT_TYPES,
   CHARACTER_TYPES,
@@ -586,6 +587,16 @@ export default function App() {
   const [showNameMappingModal, setShowNameMappingModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null); // 수정 중인 그룹
 
+  // 지표 설정 관련 state (커스텀 데이터가 있으면 하드코딩 대신 사용)
+  const [customMainScaleTraits, setCustomMainScaleTraits] = useState(null);
+  const [customScaleTraits, setCustomScaleTraits] = useState(null);
+  const [customNorms, setCustomNorms] = useState(null);
+
+  // 실제 사용할 데이터 (커스텀 값이 있으면 우선 사용)
+  const activeMainScaleTraits = customMainScaleTraits || mainScaleTraits;
+  const activeScaleTraits = customScaleTraits || scaleTraits;
+  const activeNorms = customNorms || norms;
+
   // Supabase에서 그룹 데이터 로드
   const loadGroups = async () => {
     try {
@@ -858,10 +869,20 @@ export default function App() {
               <h1 className="text-3xl font-bold text-gray-800">TCI 그룹 분석</h1>
               <p className="text-gray-500 mt-1">기질 및 성격검사 그룹 분석 서비스</p>
             </div>
-            <button onClick={() => setPage('create')}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg shadow-blue-500/25 flex items-center gap-2">
-              <span className="text-xl">+</span> 새 그룹 만들기
-            </button>
+            <div className="flex gap-3">
+              <button onClick={() => setPage('settings')}
+                className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition-all flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                지표 설정
+              </button>
+              <button onClick={() => setPage('create')}
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg shadow-blue-500/25 flex items-center gap-2">
+                <span className="text-xl">+</span> 새 그룹 만들기
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -1193,8 +1214,31 @@ export default function App() {
     );
   }
 
+  // 설정 페이지
+  if (page === 'settings') {
+    return (
+      <SettingsPage
+        mainScaleTraits={activeMainScaleTraits}
+        scaleTraits={activeScaleTraits}
+        norms={activeNorms}
+        onUpdateMainScaleTraits={setCustomMainScaleTraits}
+        onUpdateScaleTraits={setCustomScaleTraits}
+        onUpdateNorms={setCustomNorms}
+        onBack={() => setPage('list')}
+      />
+    );
+  }
+
   if (page === 'analysis' && selectedGroup) {
-    return <AnalysisPage group={selectedGroup} onBack={() => setPage('list')} />;
+    return (
+      <AnalysisPage
+        group={selectedGroup}
+        onBack={() => setPage('list')}
+        mainScaleTraits={activeMainScaleTraits}
+        scaleTraits={activeScaleTraits}
+        norms={activeNorms}
+      />
+    );
   }
 
   return null;
@@ -1203,7 +1247,7 @@ export default function App() {
 // ========================================
 // 분석 페이지 컴포넌트
 // ========================================
-function AnalysisPage({ group, onBack }) {
+function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
   // ★ 복수 선택을 위해 Set으로 변경
   const [selectedPersons, setSelectedPersons] = useState(new Set());
   const [mainTab, setMainTab] = useState('temperament');
