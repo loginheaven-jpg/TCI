@@ -1370,8 +1370,8 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
         charType={charType}
         tempTypeCode={tempTypeCode}
         charTypeCode={charTypeCode}
-        scaleTraits={activeScaleTraits}
-        mainScaleTraits={activeMainScaleTraits}
+        scaleTraits={scaleTraits}
+        mainScaleTraits={mainScaleTraits}
         interactions={interactionsData}
         coachingTips={tips}
         reportType={reportType}
