@@ -1293,6 +1293,15 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
     setSelectedPersons(new Set());
   };
 
+  // ★ 전체 선택
+  const selectAll = () => {
+    const allNames = rawData.map(p => getName(p));
+    setSelectedPersons(new Set(allNames));
+  };
+
+  // ★ 전체 선택 여부 확인
+  const isAllSelected = rawData.length > 0 && selectedPersons.size === rawData.length;
+
   // ★ 선택 여부 확인 (아무도 선택 안 됐으면 전체 표시)
   const isSelected = (name) => {
     if (selectedPersons.size === 0) return true;
@@ -2298,12 +2307,22 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
       <div className="flex gap-4 h-[calc(100vh-140px)]">
         {/* 참가자 목록 */}
         <div className="w-44 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex-shrink-0 overflow-y-auto">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-bold text-gray-500 uppercase">참가자</h3>
             {selectedPersons.size > 0 && (
               <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">{selectedPersons.size}</span>
             )}
           </div>
+          {/* 전체 선택/해제 토글 버튼 */}
+          <button
+            onClick={isAllSelected ? clearSelection : selectAll}
+            className={`w-full mb-3 px-3 py-2 text-xs rounded-lg font-medium transition ${
+              isAllSelected
+                ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : 'bg-blue-500 text-white hover:bg-blue-600'
+            }`}>
+            {isAllSelected ? '전체 해제' : '전체 선택'}
+          </button>
           <div className="space-y-1">
             {rawData.map((p, i) => {
               const name = getName(p);
@@ -2312,7 +2331,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
                 <button key={i} onClick={() => togglePerson(name)}
                   className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition flex items-center gap-2 ${
                     selected ? 'bg-blue-50 text-blue-700 font-medium ring-2 ring-blue-200' : 'hover:bg-gray-50 text-gray-600'}`}>
-                  <span className="w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white shadow" 
+                  <span className="w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white shadow"
                     style={{ backgroundColor: memberColors[i % memberColors.length] }}></span>
                   <span className="truncate">{name}</span>
                   {selected && <span className="ml-auto text-blue-500">✓</span>}
@@ -2320,12 +2339,6 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
               );
             })}
           </div>
-          {selectedPersons.size > 0 && (
-            <button onClick={clearSelection}
-              className="w-full mt-4 px-3 py-2 text-xs text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 transition font-medium">
-              선택 해제 ({selectedPersons.size})
-            </button>
-          )}
         </div>
 
         {/* 메인 콘텐츠 */}
