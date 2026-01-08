@@ -128,6 +128,13 @@ const styles = StyleSheet.create({
   levelH: { backgroundColor: '#3B82F6' },
   levelM: { backgroundColor: '#9CA3AF' },
   levelL: { backgroundColor: '#F97316' },
+  // 페르소나 텍스트 스타일
+  personaText: {
+    fontSize: 5,
+    color: '#6B7280',
+    marginTop: 2,
+    textAlign: 'center',
+  },
   // 유형 분석 박스
   typeBox: {
     backgroundColor: '#F8FAFC',
@@ -256,15 +263,15 @@ const styles = StyleSheet.create({
     fontSize: 7,
     color: '#4B5563',
   },
-  // 기질 하위지표 컬럼 (평균, 레벨 포함)
-  colScaleTemp: { width: '10%', textAlign: 'center' },
-  colValueTemp: { width: '14%', textAlign: 'center' },
-  colLevelTemp: { width: '8%', textAlign: 'center' },
-  colTraitTemp: { width: '34%' },
-  // 성격 하위지표 컬럼 (평균, 레벨 없음)
-  colScaleChar: { width: '12%', textAlign: 'center' },
-  colValueChar: { width: '10%', textAlign: 'center' },
-  colTraitChar: { width: '39%' },
+  // 기질 하위지표 컬럼 (평균, 레벨 포함) - 척도 컬럼 넓힘
+  colScaleTemp: { width: '18%', textAlign: 'center' },
+  colValueTemp: { width: '10%', textAlign: 'center' },
+  colLevelTemp: { width: '6%', textAlign: 'center' },
+  colTraitTemp: { width: '33%' },
+  // 성격 하위지표 컬럼 (평균, 레벨 없음) - 척도 컬럼 넓힘
+  colScaleChar: { width: '20%', textAlign: 'center' },
+  colValueChar: { width: '8%', textAlign: 'center' },
+  colTraitChar: { width: '36%' },
   // 레벨 뱃지 (작은 버전)
   levelBadge: {
     fontSize: 6,
@@ -366,7 +373,7 @@ const subScaleAverages = {
 
 // PDF 문서 컴포넌트
 // reportType: 'full' (전체) | 'indicators' (지표만)
-const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, scaleTraits, interactions, coachingTips, reportType = 'full' }) => {
+const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, scaleTraits, mainScaleTraits, interactions, coachingTips, reportType = 'full' }) => {
   const temperamentScales = ['NS', 'HA', 'RD', 'PS'];
   const characterScales = ['SD', 'CO', 'ST'];
   const allScales = [...temperamentScales, ...characterScales];
@@ -401,11 +408,14 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                 const val = person[scale] || 0;
                 const level = getLevel(val);
                 const isTemp = temperamentScales.includes(scale);
+                const traits = mainScaleTraits?.[scale] || {};
+                const persona = level === 'H' ? traits.highPersona : level === 'L' ? traits.lowPersona : null;
                 return (
                   <View key={scale} style={[styles.scaleItem, isTemp ? styles.scaleItemBlue : styles.scaleItemGreen]}>
                     <Text style={styles.scaleName}>{scaleLabels[scale]}</Text>
                     <Text style={[styles.scaleValue, isTemp ? styles.scaleValueBlue : styles.scaleValueGreen]}>{val}%</Text>
                     <Text style={[styles.scaleLevel, getLevelStyle(level)]}>{level}</Text>
+                    {persona && <Text style={styles.personaText}>{persona}</Text>}
                   </View>
                 );
               })}
@@ -529,11 +539,14 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
               const val = person[scale] || 0;
               const level = getLevel(val);
               const isTemp = temperamentScales.includes(scale);
+              const traits = mainScaleTraits?.[scale] || {};
+              const persona = level === 'H' ? traits.highPersona : level === 'L' ? traits.lowPersona : null;
               return (
                 <View key={scale} style={[styles.scaleItem, isTemp ? styles.scaleItemBlue : styles.scaleItemGreen]}>
                   <Text style={styles.scaleName}>{scaleLabels[scale]}</Text>
                   <Text style={[styles.scaleValue, isTemp ? styles.scaleValueBlue : styles.scaleValueGreen]}>{val}%</Text>
                   <Text style={[styles.scaleLevel, getLevelStyle(level)]}>{level}</Text>
+                  {persona && <Text style={styles.personaText}>{persona}</Text>}
                 </View>
               );
             })}
