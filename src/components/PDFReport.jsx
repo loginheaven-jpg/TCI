@@ -439,7 +439,7 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                     const highStyle = level === 'H' ? styles.traitActive : level === 'L' ? styles.traitInactive : styles.traitNeutral;
                     return (
                       <View key={code} style={styles.tableRow}>
-                        <Text style={[styles.tableCell, styles.colScaleTemp, { fontWeight: 700 }]}>{code}{'\n'}{scaleName}</Text>
+                        <Text style={[styles.tableCell, styles.colScaleTemp, { fontWeight: 700 }]}>{code} ({scaleName}){'\n'}<Text style={{ fontSize: 6, fontWeight: 400, color: '#3B82F6' }}>{traits.coreDescription || ''}</Text></Text>
                         <Text style={[styles.tableCell, styles.colValueTemp]}>{val}({avg})</Text>
                         <View style={[styles.colLevelTemp, { alignItems: 'center' }]}>
                           <Text style={[styles.levelBadge, getLevelStyle(level)]}>{level}</Text>
@@ -484,7 +484,7 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                     const highStyle = level === 'H' ? styles.traitActive : level === 'L' ? styles.traitInactive : styles.traitNeutral;
                     return (
                       <View key={code} style={styles.tableRow}>
-                        <Text style={[styles.tableCell, styles.colScaleChar, { fontWeight: 700 }]}>{code}{'\n'}{scaleName}</Text>
+                        <Text style={[styles.tableCell, styles.colScaleChar, { fontWeight: 700 }]}>{code} ({scaleName}){'\n'}<Text style={{ fontSize: 6, fontWeight: 400, color: '#3B82F6' }}>{traits.coreDescription || ''}</Text></Text>
                         <Text style={[styles.tableCell, styles.colValueChar]}>{val}</Text>
                         <Text style={[lowStyle, styles.colTraitChar]}>[{lowLabel}]{'\n'}{traits.lowAdv?.join(', ') || '-'}</Text>
                         <Text style={[highStyle, styles.colTraitChar]}>[{highLabel}]{'\n'}{traits.highAdv?.join(', ') || '-'}</Text>
@@ -635,7 +635,7 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                   const highStyle = level === 'H' ? styles.traitActive : level === 'L' ? styles.traitInactive : styles.traitNeutral;
                   return (
                     <View key={code} style={styles.tableRow}>
-                      <Text style={[styles.tableCell, styles.colScaleTemp, { fontWeight: 700 }]}>{code}{'\n'}{scaleName}</Text>
+                      <Text style={[styles.tableCell, styles.colScaleTemp, { fontWeight: 700 }]}>{code} ({scaleName}){'\n'}<Text style={{ fontSize: 6, fontWeight: 400, color: '#3B82F6' }}>{traits.coreDescription || ''}</Text></Text>
                       <Text style={[styles.tableCell, styles.colValueTemp]}>{val}({avg})</Text>
                       <View style={[styles.colLevelTemp, { alignItems: 'center' }]}>
                         <Text style={[styles.levelBadge, getLevelStyle(level)]}>{level}</Text>
@@ -681,7 +681,7 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                   const highStyle = level === 'H' ? styles.traitActive : level === 'L' ? styles.traitInactive : styles.traitNeutral;
                   return (
                     <View key={code} style={styles.tableRow}>
-                      <Text style={[styles.tableCell, styles.colScaleChar, { fontWeight: 700 }]}>{code}{'\n'}{scaleName}</Text>
+                      <Text style={[styles.tableCell, styles.colScaleChar, { fontWeight: 700 }]}>{code} ({scaleName}){'\n'}<Text style={{ fontSize: 6, fontWeight: 400, color: '#3B82F6' }}>{traits.coreDescription || ''}</Text></Text>
                       <Text style={[styles.tableCell, styles.colValueChar]}>{val}</Text>
                       <Text style={[lowStyle, styles.colTraitChar]}>[{lowLabel}]{'\n'}{traits.lowAdv?.join(', ') || '-'}</Text>
                       <Text style={[highStyle, styles.colTraitChar]}>[{highLabel}]{'\n'}{traits.highAdv?.join(', ') || '-'}</Text>
