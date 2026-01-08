@@ -1698,16 +1698,20 @@ function AnalysisPage({ group, onBack }) {
             <div className="space-y-5">
               {subCodes.map(code => {
                 const norm = norms[code];
-                const labelParts = subScaleLabels[code].split(' ↔ ');
-                const lowLabel = labelParts[0] || subScaleLabels[code];
-                const highLabel = labelParts[1] || '';
+                const traits = scaleTraits[code] || {};
+                const lowLabel = traits.lowLabel || subScaleLabels[code];
+                const highLabel = traits.highLabel || '';
+                const scaleName = traits.name || code;
                 return (
                   <div key={code} className="bg-gray-50 rounded-xl p-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-sm text-gray-700 font-semibold">{lowLabel}</span>
-                      <span className="text-sm font-bold text-gray-700 bg-white px-3 py-1 rounded-full shadow-sm">{code}</span>
-                      <span className="text-sm text-gray-700 font-semibold">{highLabel}</span>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs text-gray-500">{lowLabel}</span>
+                      <span className="text-sm font-bold text-gray-700 bg-white px-3 py-1 rounded-full shadow-sm">{code} ({scaleName})</span>
+                      <span className="text-xs text-gray-500">{highLabel}</span>
                     </div>
+                    {traits.coreDescription && (
+                      <div className="text-xs text-blue-500 text-center mb-3">{traits.coreDescription}</div>
+                    )}
                     <div className="space-y-2.5">
                       {rawData.map((p, idx) => {
                         const val = p[code] || 0;
