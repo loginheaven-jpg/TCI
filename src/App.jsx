@@ -1134,7 +1134,16 @@ export default function App() {
           </button>
           <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-xl">
             <h2 className="text-2xl font-bold text-gray-800 mb-2">그룹 수정</h2>
-            <p className="text-gray-500 mb-6">{editingGroup.name}</p>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-600 mb-2">그룹명</label>
+              <input
+                type="text"
+                value={editingGroup.name}
+                onChange={(e) => setEditingGroup({ ...editingGroup, name: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
+                placeholder="그룹명을 입력하세요"
+              />
+            </div>
 
             {/* 이름 매칭 테이블 */}
             <div className="mb-6">
@@ -1183,6 +1192,14 @@ export default function App() {
               </button>
               <button onClick={async () => {
                 try {
+                  // DB에서 그룹명 업데이트
+                  const { error: groupError } = await supabase
+                    .from('groups')
+                    .update({ name: editingGroup.name })
+                    .eq('id', editingGroup.id);
+
+                  if (groupError) console.error('그룹명 업데이트 오류:', groupError);
+
                   // DB에서 멤버 이름 업데이트
                   for (const m of editingGroup.members) {
                     const { error } = await supabase
