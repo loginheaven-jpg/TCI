@@ -5,6 +5,8 @@ import { supabase } from './supabaseClient';
 import { pdf } from '@react-pdf/renderer';
 import PDFReport from './components/PDFReport';
 import SettingsPage from './components/SettingsPage';
+import CoupleAnalysisPage from './components/CoupleAnalysisPage';
+import { RELATIONSHIP_TYPES } from './data/coupleInterpretations';
 import {
   TEMPERAMENT_TYPES,
   CHARACTER_TYPES,
@@ -588,6 +590,12 @@ export default function App() {
   const [editingGroup, setEditingGroup] = useState(null); // 수정 중인 그룹
   const [isIndividualMode, setIsIndividualMode] = useState(false); // 개인진단 모드
 
+  // 커플분석 관련 state
+  const [couplePersonA, setCouplePersonA] = useState(null); // Person A 데이터
+  const [couplePersonB, setCouplePersonB] = useState(null); // Person B 데이터
+  const [coupleRelType, setCoupleRelType] = useState('COUPLE'); // 관계 유형
+  const [coupleSelectMode, setCoupleSelectMode] = useState('upload'); // 'upload' or 'select'
+
   // 지표 설정 관련 state (커스텀 데이터가 있으면 하드코딩 대신 사용)
   const [customMainScaleTraits, setCustomMainScaleTraits] = useState(null);
   const [customScaleTraits, setCustomScaleTraits] = useState(null);
@@ -832,6 +840,67 @@ export default function App() {
     tryParse('euc-kr');
   };
 
+  // 커플분석 CSV 파싱 (1명용)
+  const handleCoupleFileUpload = (e, target) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const tryParse = (encoding) => {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const text = evt.target.result;
+        Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            const data = results.data.map((row, idx) => {
+              const obj = { id: idx + 1 };
+              const originalName = row.name || row['이름'] || row['Name'] || row['NAME'] || '';
+              obj.originalName = originalName;
+              obj.name = originalName;
+              obj.gender = row.gender || row['성별'] || row['Gender'] || '';
+              obj.age = parseInt(row.age || row['연령'] || row['나이'] || row['Age'] || 0) || null;
+              ['NS', 'HA', 'RD', 'PS', 'SD', 'CO', 'ST'].forEach(scale => {
+                const percentileKey = scale + 'P';
+                const val = row[percentileKey] || row[percentileKey.toLowerCase()] ||
+                            row[scale] || row[scale.toLowerCase()] || 0;
+                obj[scale] = parseFloat(val) || 0;
+              });
+              const subScales = [
+                'NS1', 'NS2', 'NS3', 'NS4', 'HA1', 'HA2', 'HA3', 'HA4',
+                'RD1', 'RD2', 'RD3', 'RD4', 'PS1', 'PS2', 'PS3', 'PS4',
+                'SD1', 'SD2', 'SD3', 'SD4', 'SD5', 'CO1', 'CO2', 'CO3', 'CO4', 'CO5',
+                'ST1', 'ST2', 'ST3'
+              ];
+              subScales.forEach(scale => {
+                const val = row[scale] || row[scale.toLowerCase()] || 0;
+                obj[scale] = parseFloat(val) || 0;
+              });
+              return obj;
+            }).filter(row => row.name);
+
+            if (data.length > 0) {
+              const person = data[0]; // 첫 번째 사람만 사용
+              if (target === 'A') setCouplePersonA(person);
+              else setCouplePersonB(person);
+            } else if (encoding === 'euc-kr') {
+              tryParse('utf-8');
+            } else {
+              alert('CSV 파일에서 데이터를 읽을 수 없습니다.');
+            }
+          },
+          error: () => {
+            if (encoding === 'euc-kr') tryParse('utf-8');
+            else alert('CSV 파일을 읽는 중 오류가 발생했습니다.');
+          }
+        });
+      };
+      reader.onerror = () => { if (encoding === 'euc-kr') tryParse('utf-8'); };
+      reader.readAsText(file, encoding);
+    };
+    tryParse('euc-kr');
+  };
+
   const handleDeleteGroup = async (id) => {
     if (confirm('이 그룹을 삭제하시겠습니까?')) {
       try {
@@ -882,6 +951,10 @@ export default function App() {
               <button onClick={() => { setIsIndividualMode(true); setPage('create'); }}
                 className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2">
                 <span className="text-xl">👤</span> 개인진단
+              </button>
+              <button onClick={() => { setCouplePersonA(null); setCouplePersonB(null); setCoupleRelType('COUPLE'); setCoupleSelectMode('upload'); setPage('couple-create'); }}
+                className="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-xl font-medium hover:from-rose-600 hover:to-rose-700 transition-all shadow-lg shadow-rose-500/25 flex items-center gap-2">
+                <span className="text-xl">💑</span> 커플분석
               </button>
               <button onClick={() => { setIsIndividualMode(false); setPage('create'); }}
                 className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg shadow-blue-500/25 flex items-center gap-2">
@@ -1240,6 +1313,161 @@ export default function App() {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // 커플분석 생성 페이지
+  if (page === 'couple-create') {
+    // 기존 그룹의 모든 멤버 목록 (선택 모드용)
+    const allMembers = groups.flatMap(g => g.members.map(m => ({ ...m, groupName: g.name, groupId: g.id })));
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+        <div className="max-w-2xl mx-auto">
+          <button onClick={() => setPage('list')} className="text-gray-500 hover:text-gray-700 mb-6 flex items-center gap-2 font-medium">
+            ← 목록으로 돌아가기
+          </button>
+          <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-xl">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">💑 커플분석</h2>
+            <p className="text-gray-500 mb-6">두 사람의 기질/성격을 비교 분석합니다.</p>
+
+            {/* 관계 유형 선택 */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">관계 유형</label>
+              <div className="grid grid-cols-4 gap-2">
+                {Object.entries(RELATIONSHIP_TYPES).map(([key, rt]) => (
+                  <button key={key} onClick={() => setCoupleRelType(key)}
+                    className={`p-3 rounded-xl border-2 text-center transition-all ${coupleRelType === key ? 'border-rose-400 bg-rose-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <div className="text-2xl mb-1">{rt.icon}</div>
+                    <div className="text-xs font-medium text-gray-700">{rt.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 데이터 입력 방식 선택 */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">데이터 입력 방식</label>
+              <div className="flex gap-2">
+                <button onClick={() => setCoupleSelectMode('upload')}
+                  className={`flex-1 p-3 rounded-xl border-2 text-center transition-all ${coupleSelectMode === 'upload' ? 'border-rose-400 bg-rose-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <div className="text-xl mb-1">📄</div>
+                  <div className="text-xs font-medium text-gray-700">CSV 업로드</div>
+                </button>
+                <button onClick={() => setCoupleSelectMode('select')}
+                  disabled={allMembers.length === 0}
+                  className={`flex-1 p-3 rounded-xl border-2 text-center transition-all ${coupleSelectMode === 'select' ? 'border-rose-400 bg-rose-50' : 'border-gray-200 hover:border-gray-300'} ${allMembers.length === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                  <div className="text-xl mb-1">👥</div>
+                  <div className="text-xs font-medium text-gray-700">기존 멤버 선택</div>
+                </button>
+              </div>
+            </div>
+
+            {/* CSV 업로드 모드 */}
+            {coupleSelectMode === 'upload' && (
+              <div className="space-y-4">
+                {/* Person A */}
+                <div className="border-2 rounded-xl p-4 border-blue-200 bg-blue-50/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">A</span>
+                    <span className="font-semibold text-gray-700">
+                      {couplePersonA ? couplePersonA.name || couplePersonA.originalName : 'Person A'}
+                    </span>
+                    {couplePersonA && <span className="text-green-500 text-sm">✓ 로드 완료</span>}
+                  </div>
+                  <div className="relative border-2 border-dashed border-blue-200 rounded-lg p-4 text-center hover:border-blue-400 transition cursor-pointer">
+                    <input type="file" accept=".csv" onChange={(e) => handleCoupleFileUpload(e, 'A')}
+                      className="w-full opacity-0 absolute inset-0 cursor-pointer" />
+                    <p className="text-sm text-gray-500">{couplePersonA ? '다시 업로드' : 'CSV 파일 선택'}</p>
+                  </div>
+                </div>
+
+                {/* Person B */}
+                <div className="border-2 rounded-xl p-4 border-orange-200 bg-orange-50/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-bold">B</span>
+                    <span className="font-semibold text-gray-700">
+                      {couplePersonB ? couplePersonB.name || couplePersonB.originalName : 'Person B'}
+                    </span>
+                    {couplePersonB && <span className="text-green-500 text-sm">✓ 로드 완료</span>}
+                  </div>
+                  <div className="relative border-2 border-dashed border-orange-200 rounded-lg p-4 text-center hover:border-orange-400 transition cursor-pointer">
+                    <input type="file" accept=".csv" onChange={(e) => handleCoupleFileUpload(e, 'B')}
+                      className="w-full opacity-0 absolute inset-0 cursor-pointer" />
+                    <p className="text-sm text-gray-500">{couplePersonB ? '다시 업로드' : 'CSV 파일 선택'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 기존 멤버 선택 모드 */}
+            {coupleSelectMode === 'select' && (
+              <div className="space-y-4">
+                {/* Person A 선택 */}
+                <div className="border-2 rounded-xl p-4 border-blue-200 bg-blue-50/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">A</span>
+                    <span className="font-semibold text-gray-700">Person A 선택</span>
+                  </div>
+                  <select onChange={(e) => {
+                    const idx = parseInt(e.target.value);
+                    if (!isNaN(idx)) setCouplePersonA(allMembers[idx]);
+                  }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" defaultValue="">
+                    <option value="" disabled>멤버를 선택하세요</option>
+                    {allMembers.map((m, idx) => (
+                      <option key={idx} value={idx}>{m.name} ({m.groupName})</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Person B 선택 */}
+                <div className="border-2 rounded-xl p-4 border-orange-200 bg-orange-50/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-bold">B</span>
+                    <span className="font-semibold text-gray-700">Person B 선택</span>
+                  </div>
+                  <select onChange={(e) => {
+                    const idx = parseInt(e.target.value);
+                    if (!isNaN(idx)) setCouplePersonB(allMembers[idx]);
+                  }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" defaultValue="">
+                    <option value="" disabled>멤버를 선택하세요</option>
+                    {allMembers.map((m, idx) => (
+                      <option key={idx} value={idx}>{m.name} ({m.groupName})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* 분석 시작 버튼 */}
+            <div className="flex gap-4 pt-6">
+              <button onClick={() => setPage('list')}
+                className="flex-1 px-6 py-3 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition">
+                취소
+              </button>
+              <button
+                onClick={() => setPage('couple-analysis')}
+                disabled={!couplePersonA || !couplePersonB}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-xl font-medium hover:from-rose-600 hover:to-rose-700 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition shadow-lg shadow-rose-500/25 disabled:shadow-none">
+                분석 시작
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 커플분석 결과 페이지
+  if (page === 'couple-analysis' && couplePersonA && couplePersonB) {
+    return (
+      <CoupleAnalysisPage
+        personA={couplePersonA}
+        personB={couplePersonB}
+        relationshipType={coupleRelType}
+        onBack={() => setPage('couple-create')}
+        mainScaleTraits={activeMainScaleTraits}
+      />
     );
   }
 
