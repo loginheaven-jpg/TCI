@@ -586,6 +586,7 @@ export default function App() {
   const [nameMapping, setNameMapping] = useState([]); // [{originalName, displayName, isDuplicate}, ...]
   const [showNameMappingModal, setShowNameMappingModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null); // 수정 중인 그룹
+  const [isIndividualMode, setIsIndividualMode] = useState(false); // 개인진단 모드
 
   // 지표 설정 관련 state (커스텀 데이터가 있으면 하드코딩 대신 사용)
   const [customMainScaleTraits, setCustomMainScaleTraits] = useState(null);
@@ -878,7 +879,11 @@ export default function App() {
                 </svg>
                 지표 설정
               </button>
-              <button onClick={() => setPage('create')}
+              <button onClick={() => { setIsIndividualMode(true); setPage('create'); }}
+                className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2">
+                <span className="text-xl">👤</span> 개인진단
+              </button>
+              <button onClick={() => { setIsIndividualMode(false); setPage('create'); }}
                 className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg shadow-blue-500/25 flex items-center gap-2">
                 <span className="text-xl">+</span> 새 그룹 만들기
               </button>
@@ -904,14 +909,18 @@ export default function App() {
                   onClick={() => { setSelectedGroup(g); setPage('analysis'); }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-                        <span className="text-2xl text-white">📁</span>
+                      <div className={`w-14 h-14 bg-gradient-to-br ${g.members.length === 1 ? 'from-emerald-500 to-emerald-600 shadow-emerald-500/30' : 'from-blue-500 to-blue-600 shadow-blue-500/30'} rounded-xl flex items-center justify-center shadow-lg`}>
+                        <span className="text-2xl text-white">{g.members.length === 1 ? '👤' : '📁'}</span>
                       </div>
                       <div>
                         <h3 className="font-bold text-gray-800 text-lg group-hover:text-blue-600 transition">{g.name}</h3>
                         <p className="text-sm text-gray-500">{g.desc || '설명 없음'}</p>
                         <div className="flex items-center gap-3 mt-1">
-                          <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">{g.members.length}명</span>
+                          {g.members.length === 1 ? (
+                            <span className="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-medium">개인</span>
+                          ) : (
+                            <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">{g.members.length}명</span>
+                          )}
                           <span className="text-xs text-gray-400">{g.createdAt} 생성</span>
                         </div>
                       </div>
@@ -945,15 +954,15 @@ export default function App() {
             ← 목록으로 돌아가기
           </button>
           <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-xl">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">새 그룹 만들기</h2>
-            <p className="text-gray-500 mb-8">CSV 파일을 업로드하여 그룹을 생성하세요.</p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">{isIndividualMode ? '개인 진단' : '새 그룹 만들기'}</h2>
+            <p className="text-gray-500 mb-8">{isIndividualMode ? '1명의 CSV 파일을 업로드하여 개인 진단을 시작하세요.' : 'CSV 파일을 업로드하여 그룹을 생성하세요.'}</p>
             
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">그룹명 *</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">{isIndividualMode ? '이름 *' : '그룹명 *'}</label>
                 <input type="text" value={newGroup.name} onChange={(e) => setNewGroup({...newGroup, name: e.target.value})}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                  placeholder="예: ACC전문코치반 2501기" />
+                  placeholder={isIndividualMode ? '예: 홍길동' : '예: ACC전문코치반 2501기'} />
               </div>
               
               <div>
@@ -976,12 +985,15 @@ export default function App() {
               </div>
 
               {uploadedData && nameMapping.length > 0 && (
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
+                <div className={`bg-gradient-to-r ${isIndividualMode && uploadedData.length > 1 ? 'from-red-50 to-orange-50 border-red-200' : 'from-green-50 to-emerald-50 border-green-200'} border rounded-xl p-4`}>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-green-600 text-lg">✓</span>
-                    <span className="text-green-700 font-semibold">{uploadedData.length}명 데이터 로드 완료</span>
+                    <span className={`${isIndividualMode && uploadedData.length > 1 ? 'text-red-600' : 'text-green-600'} text-lg`}>{isIndividualMode && uploadedData.length > 1 ? '⚠' : '✓'}</span>
+                    <span className={`${isIndividualMode && uploadedData.length > 1 ? 'text-red-700' : 'text-green-700'} font-semibold`}>{uploadedData.length}명 데이터 로드 완료</span>
                   </div>
-                  <p className="text-green-600 text-sm">
+                  {isIndividualMode && uploadedData.length > 1 && (
+                    <p className="text-red-600 text-sm font-medium mb-2">개인진단은 1명만 가능합니다. 1명의 데이터만 포함된 CSV를 업로드해주세요.</p>
+                  )}
+                  <p className={`${isIndividualMode && uploadedData.length > 1 ? 'text-red-500' : 'text-green-600'} text-sm`}>
                     {nameMapping.slice(0, 5).map(m => m.displayName).join(', ')}
                     {nameMapping.length > 5 && ` 외 ${nameMapping.length - 5}명`}
                   </p>
@@ -998,9 +1010,9 @@ export default function App() {
                   취소
                 </button>
                 <button onClick={handleCreateGroup}
-                  disabled={!newGroup.name || !uploadedData}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition shadow-lg shadow-blue-500/25 disabled:shadow-none">
-                  그룹 생성
+                  disabled={!newGroup.name || !uploadedData || (isIndividualMode && uploadedData && uploadedData.length > 1)}
+                  className={`flex-1 px-6 py-3 bg-gradient-to-r ${isIndividualMode ? 'from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-emerald-500/25' : 'from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-blue-500/25'} text-white rounded-xl font-medium disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition shadow-lg disabled:shadow-none`}>
+                  {isIndividualMode ? '진단 시작' : '그룹 생성'}
                 </button>
               </div>
             </div>
