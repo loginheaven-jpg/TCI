@@ -125,9 +125,11 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: 2,
   },
+  levelVH: { backgroundColor: '#4F46E5' },
   levelH: { backgroundColor: '#3B82F6' },
   levelM: { backgroundColor: '#9CA3AF' },
   levelL: { backgroundColor: '#F97316' },
+  levelVL: { backgroundColor: '#EF4444' },
   // 페르소나 텍스트 스타일
   personaText: {
     fontSize: 5,
@@ -321,16 +323,25 @@ const styles = StyleSheet.create({
   },
 });
 
-// 레벨 계산 함수
-const getLevel = (value) => value >= 70 ? 'H' : value <= 30 ? 'L' : 'M';
-const getLevelStyle = (level) => level === 'H' ? styles.levelH : level === 'L' ? styles.levelL : styles.levelM;
+// 레벨 계산 함수 (5단계)
+const getLevel = (value) => value >= 81 ? 'VH' : value >= 61 ? 'H' : value >= 41 ? 'M' : value >= 21 ? 'L' : 'VL';
+const getLevelStyle = (level) => ({ VH: styles.levelVH, H: styles.levelH, M: styles.levelM, L: styles.levelL, VL: styles.levelVL }[level] || styles.levelM);
 
-// 하위척도 레벨 계산 (백분위 기준 - 상위지표와 동일)
-const getSubScaleLevel = (value, avg) => {
-  // 평균 대비 상대적 위치로 판단
-  if (value >= avg * 1.5) return 'H';
-  if (value <= avg * 0.5) return 'L';
-  return 'M';
+// 하위척도 레벨 계산 (규준 기반 z-score → 백분위 변환 → 5단계)
+const subScaleNorms = {
+  NS1: { m: 9.5, sd: 3.2 }, NS2: { m: 7.0, sd: 3.3 }, NS3: { m: 6.0, sd: 3.2 }, NS4: { m: 5.2, sd: 3.2 },
+  HA1: { m: 7.8, sd: 4.1 }, HA2: { m: 9.9, sd: 3.0 }, HA3: { m: 8.7, sd: 3.6 }, HA4: { m: 8.7, sd: 3.4 },
+  RD1: { m: 11.1, sd: 2.9 }, RD2: { m: 10.5, sd: 3.0 }, RD3: { m: 11.6, sd: 3.3 }, RD4: { m: 9.4, sd: 2.6 },
+  PS1: { m: 12.7, sd: 3.0 }, PS2: { m: 10.7, sd: 3.0 }, PS3: { m: 10.4, sd: 3.7 }, PS4: { m: 9.9, sd: 3.5 },
+  SD1: { m: 12.7, sd: 2.9 }, SD2: { m: 11.6, sd: 3.1 }, SD3: { m: 6.8, sd: 1.9 }, SD4: { m: 4.2, sd: 1.7 }, SD5: { m: 12.5, sd: 3.2 },
+  CO1: { m: 12.6, sd: 2.8 }, CO2: { m: 9.6, sd: 2.5 }, CO3: { m: 9.9, sd: 2.5 }, CO4: { m: 8.9, sd: 2.6 }, CO5: { m: 15.1, sd: 2.5 },
+  ST1: { m: 9.1, sd: 4.0 }, ST2: { m: 7.4, sd: 4.1 }, ST3: { m: 9.2, sd: 5.4 }
+};
+const getSubScaleLevel = (value, _avg, code) => {
+  const norm = subScaleNorms[code];
+  if (!norm) return 'M';
+  const pct = Math.round(((value - norm.m) / norm.sd + 3) / 6 * 100);
+  return getLevel(pct);
 };
 
 // 척도 라벨
@@ -439,14 +450,16 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                   {subScaleGroups[scale].map(code => {
                     const val = person[code] || 0;
                     const avg = subScaleAverages[code] || 10;
-                    const level = getSubScaleLevel(val, avg);
+                    const level = getSubScaleLevel(val, avg, code);
                     const traits = scaleTraits[code] || { lowAdv: [], highAdv: [] };
                     const scaleName = traits.name || scaleLabels[code] || code;
                     const lowLabel = traits.lowLabel || '낮을 때';
                     const highLabel = traits.highLabel || '높을 때';
-                    // 레벨별 스타일: H=오른쪽 강조, L=왼쪽 강조, M=양쪽 동일
-                    const lowStyle = level === 'L' ? styles.traitActive : level === 'H' ? styles.traitInactive : styles.traitNeutral;
-                    const highStyle = level === 'H' ? styles.traitActive : level === 'L' ? styles.traitInactive : styles.traitNeutral;
+                    // 레벨별 스타일: VH/H=오른쪽 강조, VL/L=왼쪽 강조, M=양쪽 동일
+                    const isLow = level === 'L' || level === 'VL';
+                    const isHigh = level === 'H' || level === 'VH';
+                    const lowStyle = isLow ? styles.traitActive : isHigh ? styles.traitInactive : styles.traitNeutral;
+                    const highStyle = isHigh ? styles.traitActive : isLow ? styles.traitInactive : styles.traitNeutral;
                     return (
                       <View key={code} style={styles.tableRow}>
                         <Text style={[styles.tableCell, styles.colScaleTemp, { fontWeight: 700 }]}>{code} ({scaleName}){'\n'}<Text style={{ fontSize: 6, fontWeight: 400, color: '#3B82F6' }}>{traits.coreDescription || ''}</Text></Text>
@@ -484,14 +497,16 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                   {subScaleGroups[scale].map(code => {
                     const val = person[code] || 0;
                     const avg = subScaleAverages[code] || 10;
-                    const level = getSubScaleLevel(val, avg);
+                    const level = getSubScaleLevel(val, avg, code);
                     const traits = scaleTraits[code] || { lowAdv: [], highAdv: [] };
                     const scaleName = traits.name || scaleLabels[code] || code;
                     const lowLabel = traits.lowLabel || '낮을 때';
                     const highLabel = traits.highLabel || '높을 때';
-                    // 레벨별 스타일: H=오른쪽 강조, L=왼쪽 강조, M=양쪽 동일
-                    const lowStyle = level === 'L' ? styles.traitActive : level === 'H' ? styles.traitInactive : styles.traitNeutral;
-                    const highStyle = level === 'H' ? styles.traitActive : level === 'L' ? styles.traitInactive : styles.traitNeutral;
+                    // 레벨별 스타일: VH/H=오른쪽 강조, VL/L=왼쪽 강조, M=양쪽 동일
+                    const isLow = level === 'L' || level === 'VL';
+                    const isHigh = level === 'H' || level === 'VH';
+                    const lowStyle = isLow ? styles.traitActive : isHigh ? styles.traitInactive : styles.traitNeutral;
+                    const highStyle = isHigh ? styles.traitActive : isLow ? styles.traitInactive : styles.traitNeutral;
                     return (
                       <View key={code} style={styles.tableRow}>
                         <Text style={[styles.tableCell, styles.colScaleChar, { fontWeight: 700 }]}>{code} ({scaleName}){'\n'}<Text style={{ fontSize: 6, fontWeight: 400, color: '#3B82F6' }}>{traits.coreDescription || ''}</Text></Text>
@@ -638,14 +653,16 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                 {subScaleGroups[scale].map(code => {
                   const val = person[code] || 0;
                   const avg = subScaleAverages[code] || 10;
-                  const level = getSubScaleLevel(val, avg);
+                  const level = getSubScaleLevel(val, avg, code);
                   const traits = scaleTraits[code] || { lowAdv: [], highAdv: [] };
                   const scaleName = traits.name || scaleLabels[code] || code;
                   const lowLabel = traits.lowLabel || '낮을 때';
                   const highLabel = traits.highLabel || '높을 때';
-                  // 레벨별 스타일: H=오른쪽 강조, L=왼쪽 강조, M=양쪽 동일
-                  const lowStyle = level === 'L' ? styles.traitActive : level === 'H' ? styles.traitInactive : styles.traitNeutral;
-                  const highStyle = level === 'H' ? styles.traitActive : level === 'L' ? styles.traitInactive : styles.traitNeutral;
+                  // 레벨별 스타일: VH/H=오른쪽 강조, VL/L=왼쪽 강조, M=양쪽 동일
+                  const isLow = level === 'L' || level === 'VL';
+                  const isHigh = level === 'H' || level === 'VH';
+                  const lowStyle = isLow ? styles.traitActive : isHigh ? styles.traitInactive : styles.traitNeutral;
+                  const highStyle = isHigh ? styles.traitActive : isLow ? styles.traitInactive : styles.traitNeutral;
                   return (
                     <View key={code} style={styles.tableRow}>
                       <Text style={[styles.tableCell, styles.colScaleTemp, { fontWeight: 700 }]}>{code} ({scaleName}){'\n'}<Text style={{ fontSize: 6, fontWeight: 400, color: '#3B82F6' }}>{traits.coreDescription || ''}</Text></Text>
@@ -684,14 +701,16 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                 {subScaleGroups[scale].map(code => {
                   const val = person[code] || 0;
                   const avg = subScaleAverages[code] || 10;
-                  const level = getSubScaleLevel(val, avg);
+                  const level = getSubScaleLevel(val, avg, code);
                   const traits = scaleTraits[code] || { lowAdv: [], highAdv: [] };
                   const scaleName = traits.name || scaleLabels[code] || code;
                   const lowLabel = traits.lowLabel || '낮을 때';
                   const highLabel = traits.highLabel || '높을 때';
-                  // 레벨별 스타일: H=오른쪽 강조, L=왼쪽 강조, M=양쪽 동일
-                  const lowStyle = level === 'L' ? styles.traitActive : level === 'H' ? styles.traitInactive : styles.traitNeutral;
-                  const highStyle = level === 'H' ? styles.traitActive : level === 'L' ? styles.traitInactive : styles.traitNeutral;
+                  // 레벨별 스타일: VH/H=오른쪽 강조, VL/L=왼쪽 강조, M=양쪽 동일
+                  const isLow = level === 'L' || level === 'VL';
+                  const isHigh = level === 'H' || level === 'VH';
+                  const lowStyle = isLow ? styles.traitActive : isHigh ? styles.traitInactive : styles.traitNeutral;
+                  const highStyle = isHigh ? styles.traitActive : isLow ? styles.traitInactive : styles.traitNeutral;
                   return (
                     <View key={code} style={styles.tableRow}>
                       <Text style={[styles.tableCell, styles.colScaleChar, { fontWeight: 700 }]}>{code} ({scaleName}){'\n'}<Text style={{ fontSize: 6, fontWeight: 400, color: '#3B82F6' }}>{traits.coreDescription || ''}</Text></Text>

@@ -6,7 +6,8 @@ import {
 import {
   RELATIONSHIP_TYPES, TEMPERAMENT_DYNAMICS, CHARACTER_INTERACTIONS,
   COMMUNICATION_RULES, CONFLICT_RESOLUTION_STEPS, GROWTH_ROADMAP,
-  getCoupleLevel, getGapCategory, getCombinationKey, getGapLabel, getGapColor
+  getCoupleLevel, toInterpretLevel, getLevelLabel, getLevelColor5,
+  getGapCategory, getCombinationKey, getGapLabel, getGapColor
 } from '../data/coupleInterpretations';
 
 const scaleLabels = {
@@ -57,13 +58,14 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
   // 소통 팁 생성 - 상대방의 가장 높은 기질 척도 기준
   const getCommunicationTips = (target) => {
     const highest = temperamentScales.reduce((a, b) => (target[a] > target[b]) ? a : b);
-    const level = getCoupleLevel(target[highest]);
-    const key = `${highest}-${level}`;
+    const level5 = getCoupleLevel(target[highest]);
+    const level3 = toInterpretLevel(level5);
+    const key = `${highest}-${level3}`;
     return {
       praise: COMMUNICATION_RULES.praise[key] || COMMUNICATION_RULES.praise[`${highest}-High`],
       request: COMMUNICATION_RULES.request[key] || COMMUNICATION_RULES.request[`${highest}-High`],
       scaleLabel: scaleLabels[highest],
-      level
+      level: level5
     };
   };
 
@@ -74,10 +76,13 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
   const resilienceLevel = resilience >= 65 ? '높음' : resilience >= 50 ? '양호' : resilience >= 35 ? '주의' : '위험';
   const resilienceColor = resilience >= 65 ? 'text-green-600' : resilience >= 50 ? 'text-blue-600' : resilience >= 35 ? 'text-yellow-600' : 'text-red-600';
 
-  // 레벨 뱃지
+  // 레벨 뱃지 (5단계)
   const LevelBadge = ({ level }) => {
-    const colors = level === 'High' ? 'bg-blue-100 text-blue-700' : level === 'Low' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600';
-    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors}`}>{level}</span>;
+    const colorMap = {
+      VH: 'bg-indigo-100 text-indigo-700', H: 'bg-blue-100 text-blue-700',
+      M: 'bg-gray-100 text-gray-600', L: 'bg-orange-100 text-orange-700', VL: 'bg-red-100 text-red-700'
+    };
+    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colorMap[level] || colorMap.M}`}>{getLevelLabel(level)}</span>;
   };
 
   // 탭 정의
@@ -257,7 +262,7 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
 
           {dynamics && (
             <div className="text-sm text-gray-500 mb-2">
-              조합 유형: <span className="font-semibold text-gray-700">{d.levelA} × {d.levelB}</span> → <span className="font-bold text-blue-700">{dynamics.label}</span>
+              조합 유형: <span className="font-semibold text-gray-700">{getLevelLabel(d.levelA)} × {getLevelLabel(d.levelB)}</span> → <span className="font-bold text-blue-700">{dynamics.label}</span>
             </div>
           )}
         </div>
@@ -392,7 +397,7 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
             <div className="mb-4">
               <h5 className="text-sm font-bold text-green-700 mb-2">💚 효과적인 칭찬</h5>
               <p className="text-sm text-gray-700 bg-white rounded-xl p-3 leading-relaxed">"{tipsForA.praise}"</p>
-              <p className="text-xs text-gray-500 mt-1">{personB.name}님의 {tipsForA.scaleLabel}({tipsForA.level}) 기질에 맞춘 표현</p>
+              <p className="text-xs text-gray-500 mt-1">{personB.name}님의 {tipsForA.scaleLabel}({getLevelLabel(tipsForA.level)}) 기질에 맞춘 표현</p>
             </div>
             <div>
               <h5 className="text-sm font-bold text-amber-700 mb-2">💛 변화 요청 방법</h5>
@@ -404,7 +409,7 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
             <div className="mb-4">
               <h5 className="text-sm font-bold text-green-700 mb-2">💚 효과적인 칭찬</h5>
               <p className="text-sm text-gray-700 bg-white rounded-xl p-3 leading-relaxed">"{tipsForB.praise}"</p>
-              <p className="text-xs text-gray-500 mt-1">{personA.name}님의 {tipsForB.scaleLabel}({tipsForB.level}) 기질에 맞춘 표현</p>
+              <p className="text-xs text-gray-500 mt-1">{personA.name}님의 {tipsForB.scaleLabel}({getLevelLabel(tipsForB.level)}) 기질에 맞춘 표현</p>
             </div>
             <div>
               <h5 className="text-sm font-bold text-amber-700 mb-2">💛 변화 요청 방법</h5>

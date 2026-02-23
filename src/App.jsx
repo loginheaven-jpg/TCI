@@ -2167,8 +2167,8 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
     if (!person) return null;
 
     const allScales = [...temperamentScales, ...characterScales];
-    const getLevel = (value) => value >= 70 ? 'H' : value <= 30 ? 'L' : 'M';
-    const getLevelColor = (level) => level === 'H' ? 'bg-blue-500' : level === 'L' ? 'bg-orange-400' : 'bg-gray-400';
+    const getLevel = (value) => value >= 81 ? 'VH' : value >= 61 ? 'H' : value >= 41 ? 'M' : value >= 21 ? 'L' : 'VL';
+    const getLevelColor = (level) => ({ VH: 'bg-indigo-600', H: 'bg-blue-500', M: 'bg-gray-400', L: 'bg-orange-400', VL: 'bg-red-500' }[level] || 'bg-gray-400');
 
     // PDF 렌더링을 위해 변수 미리 계산 (IIFE 대신)
     const nsLevel = getTScoreLevel(person.NS);
@@ -2421,14 +2421,16 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
                         const val = person[code] || 0;
                         const norm = norms[code];
                         const pct = Math.round(((val - norm.m) / norm.sd + 3) / 6 * 100);
-                        const level = pct >= 70 ? 'H' : pct <= 30 ? 'L' : 'M';
+                        const level = getLevel(pct);
                         const traits = scaleTraits[code] || { lowAdv: [], lowDis: [], highAdv: [], highDis: [] };
-                        
-                        // 레벨별 스타일: H=오른쪽 강조, L=왼쪽 강조, M=양쪽 동일
-                        const lowDisStyle = level === 'L' ? 'text-gray-700 font-semibold' : level === 'H' ? 'text-gray-300' : 'text-gray-400';
-                        const lowAdvStyle = level === 'L' ? 'text-gray-800 font-bold' : level === 'H' ? 'text-gray-300' : 'text-gray-600';
-                        const highAdvStyle = level === 'H' ? 'text-gray-800 font-bold' : level === 'L' ? 'text-gray-300' : 'text-gray-600';
-                        const highDisStyle = level === 'H' ? 'text-gray-700 font-semibold' : level === 'L' ? 'text-gray-300' : 'text-gray-400';
+
+                        // 레벨별 스타일: VH/H=오른쪽 강조, VL/L=왼쪽 강조, M=양쪽 동일
+                        const isLow = level === 'L' || level === 'VL';
+                        const isHigh = level === 'H' || level === 'VH';
+                        const lowDisStyle = isLow ? 'text-gray-700 font-semibold' : isHigh ? 'text-gray-300' : 'text-gray-400';
+                        const lowAdvStyle = isLow ? 'text-gray-800 font-bold' : isHigh ? 'text-gray-300' : 'text-gray-600';
+                        const highAdvStyle = isHigh ? 'text-gray-800 font-bold' : isLow ? 'text-gray-300' : 'text-gray-600';
+                        const highDisStyle = isHigh ? 'text-gray-700 font-semibold' : isLow ? 'text-gray-300' : 'text-gray-400';
 
                         return (
                           <tr key={code} className="border-b border-gray-100 hover:bg-gray-50 transition">

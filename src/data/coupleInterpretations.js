@@ -501,11 +501,25 @@ export const GROWTH_ROADMAP = [
 // 헬퍼 함수
 // ========================================
 
+// 5단계 레벨 (표시용)
 export const getCoupleLevel = (percentile) => {
-  if (percentile >= 67) return 'High';
-  if (percentile >= 34) return 'Medium';
+  if (percentile >= 81) return 'VH';
+  if (percentile >= 61) return 'H';
+  if (percentile >= 41) return 'M';
+  if (percentile >= 21) return 'L';
+  return 'VL';
+};
+
+// 5단계 → 3단계 매핑 (해석 매트릭스 조회용)
+export const toInterpretLevel = (level) => {
+  if (level === 'VH' || level === 'H') return 'High';
+  if (level === 'M') return 'Medium';
   return 'Low';
 };
+
+export const getLevelLabel = (level) => ({ VH: '매우 높음', H: '높음', M: '보통', L: '낮음', VL: '매우 낮음' }[level] || '보통');
+
+export const getLevelColor5 = (level) => ({ VH: 'bg-indigo-600', H: 'bg-blue-500', M: 'bg-gray-400', L: 'bg-orange-400', VL: 'bg-red-500' }[level] || 'bg-gray-400');
 
 export const getGapCategory = (scoreA, scoreB) => {
   const gap = Math.abs(scoreA - scoreB);
@@ -514,10 +528,10 @@ export const getGapCategory = (scoreA, scoreB) => {
   return 'contrast';
 };
 
+// 5단계 레벨을 받아 해석 매트릭스 조회용 3단계 키 반환
 export const getCombinationKey = (levelA, levelB) => {
-  const shortA = levelA === 'High' ? 'H' : levelA === 'Medium' ? 'M' : 'L';
-  const shortB = levelB === 'High' ? 'H' : levelB === 'Medium' ? 'M' : 'L';
-  return `${shortA}-${shortB}`;
+  const map3 = (lv) => (lv === 'VH' || lv === 'H' || lv === 'High') ? 'H' : (lv === 'M' || lv === 'Medium') ? 'M' : 'L';
+  return `${map3(levelA)}-${map3(levelB)}`;
 };
 
 export const getGapLabel = (category) => {
