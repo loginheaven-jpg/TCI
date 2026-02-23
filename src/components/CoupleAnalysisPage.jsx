@@ -26,6 +26,14 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
   const [selectedScale, setSelectedScale] = useState('NS');
 
   const relType = RELATIONSHIP_TYPES[relationshipType] || RELATIONSHIP_TYPES.COUPLE;
+  const nameA = personA.name || 'A';
+  const nameB = personB.name || 'B';
+
+  // 해석 텍스트에서 A님/B님을 실제 이름으로 치환
+  const replaceNames = (text) => {
+    if (!text) return text;
+    return text.replace(/A님/g, `${nameA}님`).replace(/B님/g, `${nameB}님`);
+  };
 
   // ========================================
   // 분석 데이터 계산
@@ -272,28 +280,28 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
           <>
             <div className="bg-green-50 rounded-2xl p-6 border border-green-100">
               <h4 className="font-bold text-green-700 mb-3 flex items-center gap-2">🤝 시너지</h4>
-              <p className="text-green-800 leading-relaxed">{dynamics.synergy}</p>
+              <p className="text-green-800 leading-relaxed">{replaceNames(dynamics.synergy)}</p>
             </div>
 
             <div className="bg-red-50 rounded-2xl p-6 border border-red-100">
               <h4 className="font-bold text-red-700 mb-3 flex items-center gap-2">⚡ 갈등 지점</h4>
-              <p className="text-red-800 leading-relaxed">{dynamics.conflictPoint}</p>
+              <p className="text-red-800 leading-relaxed">{replaceNames(dynamics.conflictPoint)}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100">
-                <h5 className="font-bold text-blue-700 mb-2">{personA.name} → {personB.name}</h5>
-                <p className="text-blue-800 text-sm leading-relaxed">"{dynamics.mutualUnderstanding.A_to_B}"</p>
+                <h5 className="font-bold text-blue-700 mb-2">{nameA} → {nameB}</h5>
+                <p className="text-blue-800 text-sm leading-relaxed">"{replaceNames(dynamics.mutualUnderstanding.A_to_B)}"</p>
               </div>
               <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
-                <h5 className="font-bold text-orange-700 mb-2">{personB.name} → {personA.name}</h5>
-                <p className="text-orange-800 text-sm leading-relaxed">"{dynamics.mutualUnderstanding.B_to_A}"</p>
+                <h5 className="font-bold text-orange-700 mb-2">{nameB} → {nameA}</h5>
+                <p className="text-orange-800 text-sm leading-relaxed">"{replaceNames(dynamics.mutualUnderstanding.B_to_A)}"</p>
               </div>
             </div>
 
             <div className="bg-purple-50 rounded-2xl p-6 border border-purple-100">
               <h4 className="font-bold text-purple-700 mb-3 flex items-center gap-2">📋 추천 행동</h4>
-              <p className="text-purple-800 leading-relaxed">{dynamics.recommendation}</p>
+              <p className="text-purple-800 leading-relaxed">{replaceNames(dynamics.recommendation)}</p>
             </div>
           </>
         )}
@@ -335,7 +343,7 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
               </div>
 
               {interaction && (
-                <p className="text-gray-700 leading-relaxed">{interaction.analysis}</p>
+                <p className="text-gray-700 leading-relaxed">{replaceNames(interaction.analysis)}</p>
               )}
             </div>
           );
