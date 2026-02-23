@@ -442,9 +442,9 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                 <View style={styles.table}>
                   <View style={styles.tableHeader}>
                     <Text style={[styles.tableHeaderCell, styles.colScaleTemp]}>척도</Text>
-                    <Text style={[styles.tableHeaderCell, styles.colValueTemp]}>점수(평균)</Text>
-                    <Text style={[styles.tableHeaderCell, styles.colLevelTemp]}>수준</Text>
+                    <Text style={[styles.tableHeaderCell, styles.colValueTemp]}>점수</Text>
                     <Text style={[styles.tableHeaderCell, styles.colTraitTemp]}>낮을 때</Text>
+                    <Text style={[styles.tableHeaderCell, styles.colLevelTemp]}>수준</Text>
                     <Text style={[styles.tableHeaderCell, styles.colTraitTemp]}>높을 때</Text>
                   </View>
                   {subScaleGroups[scale].map(code => {
@@ -463,11 +463,11 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                     return (
                       <View key={code} style={styles.tableRow}>
                         <Text style={[styles.tableCell, styles.colScaleTemp, { fontWeight: 700 }]}>{code} ({scaleName}){'\n'}<Text style={{ fontSize: 6, fontWeight: 400, color: '#3B82F6' }}>{traits.coreDescription || ''}</Text></Text>
-                        <Text style={[styles.tableCell, styles.colValueTemp]}>{val}({avg})</Text>
+                        <Text style={[styles.tableCell, styles.colValueTemp]}>{val}</Text>
+                        <Text style={[lowStyle, styles.colTraitTemp]}>[{lowLabel}]{'\n'}{traits.lowAdv?.join(', ') || '-'}</Text>
                         <View style={[styles.colLevelTemp, { alignItems: 'center' }]}>
                           <Text style={[styles.levelBadge, getLevelStyle(level)]}>{level}</Text>
                         </View>
-                        <Text style={[lowStyle, styles.colTraitTemp]}>[{lowLabel}]{'\n'}{traits.lowAdv?.join(', ') || '-'}</Text>
                         <Text style={[highStyle, styles.colTraitTemp]}>[{highLabel}]{'\n'}{traits.highAdv?.join(', ') || '-'}</Text>
                       </View>
                     );
@@ -645,9 +645,9 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
               <View style={styles.table}>
                 <View style={styles.tableHeader}>
                   <Text style={[styles.tableHeaderCell, styles.colScaleTemp]}>척도</Text>
-                  <Text style={[styles.tableHeaderCell, styles.colValueTemp]}>점수(평균)</Text>
-                  <Text style={[styles.tableHeaderCell, styles.colLevelTemp]}>수준</Text>
+                  <Text style={[styles.tableHeaderCell, styles.colValueTemp]}>점수</Text>
                   <Text style={[styles.tableHeaderCell, styles.colTraitTemp]}>낮을 때</Text>
+                  <Text style={[styles.tableHeaderCell, styles.colLevelTemp]}>수준</Text>
                   <Text style={[styles.tableHeaderCell, styles.colTraitTemp]}>높을 때</Text>
                 </View>
                 {subScaleGroups[scale].map(code => {
@@ -666,11 +666,11 @@ const PDFReport = ({ person, tempType, charType, tempTypeCode, charTypeCode, sca
                   return (
                     <View key={code} style={styles.tableRow}>
                       <Text style={[styles.tableCell, styles.colScaleTemp, { fontWeight: 700 }]}>{code} ({scaleName}){'\n'}<Text style={{ fontSize: 6, fontWeight: 400, color: '#3B82F6' }}>{traits.coreDescription || ''}</Text></Text>
-                      <Text style={[styles.tableCell, styles.colValueTemp]}>{val}({avg})</Text>
+                      <Text style={[styles.tableCell, styles.colValueTemp]}>{val}</Text>
+                      <Text style={[lowStyle, styles.colTraitTemp]}>[{lowLabel}]{'\n'}{traits.lowAdv?.join(', ') || '-'}</Text>
                       <View style={[styles.colLevelTemp, { alignItems: 'center' }]}>
                         <Text style={[styles.levelBadge, getLevelStyle(level)]}>{level}</Text>
                       </View>
-                      <Text style={[lowStyle, styles.colTraitTemp]}>[{lowLabel}]{'\n'}{traits.lowAdv?.join(', ') || '-'}</Text>
                       <Text style={[highStyle, styles.colTraitTemp]}>[{highLabel}]{'\n'}{traits.highAdv?.join(', ') || '-'}</Text>
                     </View>
                   );

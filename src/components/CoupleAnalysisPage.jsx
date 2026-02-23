@@ -3,6 +3,8 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
   ResponsiveContainer, Tooltip
 } from 'recharts';
+import { pdf } from '@react-pdf/renderer';
+import CouplePDFReport from './CouplePDFReport';
 import {
   RELATIONSHIP_TYPES, TEMPERAMENT_DYNAMICS, CHARACTER_INTERACTIONS,
   COMMUNICATION_RULES, CONFLICT_RESOLUTION_STEPS, GROWTH_ROADMAP,
@@ -24,6 +26,7 @@ const characterScales = ['SD', 'CO'];
 export default function CoupleAnalysisPage({ personA, personB, relationshipType, onBack, mainScaleTraits }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedScale, setSelectedScale] = useState('NS');
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const relType = RELATIONSHIP_TYPES[relationshipType] || RELATIONSHIP_TYPES.COUPLE;
   const nameA = personA.name || 'A';
@@ -33,6 +36,34 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
   const replaceNames = (text) => {
     if (!text) return text;
     return text.replace(/A님/g, `${nameA}님`).replace(/B님/g, `${nameB}님`);
+  };
+
+  // PDF 다운로드 핸들러
+  const handleDownloadCouplePDF = async () => {
+    setPdfLoading(true);
+    try {
+      const blob = await pdf(
+        <CouplePDFReport
+          personA={personA}
+          personB={personB}
+          relationshipType={relationshipType}
+          mainScaleTraits={mainScaleTraits}
+        />
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `TCI_커플분석_${nameA}_${nameB}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('PDF 생성 실패:', err);
+      alert('PDF 생성 중 오류가 발생했습니다.');
+    } finally {
+      setPdfLoading(false);
+    }
   };
 
   // ========================================
@@ -476,7 +507,17 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
             ← 목록으로
           </button>
           <h1 className="text-lg font-bold text-gray-800">{relType.icon} 커플분석</h1>
-          <div></div>
+          <button
+            onClick={handleDownloadCouplePDF}
+            disabled={pdfLoading}
+            className="px-4 py-2 bg-gradient-to-r from-rose-600 to-pink-600 text-white rounded-lg text-sm font-medium hover:from-rose-700 hover:to-pink-700 disabled:opacity-50 flex items-center gap-2 shadow-sm"
+          >
+            {pdfLoading ? (
+              <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg> 생성중...</>
+            ) : (
+              <>PDF 다운로드</>
+            )}
+          </button>
         </div>
         {/* 탭 */}
         <div className="max-w-5xl mx-auto px-6 pb-2 flex gap-1">
