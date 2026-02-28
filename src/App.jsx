@@ -2144,20 +2144,20 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
                       return (
                         <div className="mt-3 pt-3 border-t border-gray-200">
                           <div className="grid grid-cols-2 gap-3">
-                            {/* 낮을 때 */}
-                            <div className={`rounded-lg p-3 transition ${highlightSide === 'low' ? 'bg-orange-50 ring-1 ring-orange-200' : 'bg-gray-100 opacity-60'}`}>
+                            {/* 낮을 때 (우측정렬) */}
+                            <div className={`rounded-lg p-3 transition text-right ${highlightSide === 'low' ? 'bg-orange-50 ring-1 ring-orange-200' : 'bg-gray-100 opacity-60'}`}>
                               <div className="text-xs font-bold text-orange-600 mb-2">↓ 낮을 때</div>
                               {traits.lowAdv && (
                                 <div className="mb-1.5">
                                   {(Array.isArray(traits.lowAdv) ? traits.lowAdv : traits.lowAdv.split(',')).map((item, i) => (
-                                    <div key={i} className="text-xs text-green-700 leading-relaxed">✓ {typeof item === 'string' ? item.trim() : item}</div>
+                                    <div key={i} className="text-xs text-green-700 leading-relaxed">{typeof item === 'string' ? item.trim() : item} ✓</div>
                                   ))}
                                 </div>
                               )}
                               {traits.lowDis && (
                                 <div>
                                   {(Array.isArray(traits.lowDis) ? traits.lowDis : traits.lowDis.split(',')).map((item, i) => (
-                                    <div key={i} className="text-xs text-red-500 leading-relaxed">✗ {typeof item === 'string' ? item.trim() : item}</div>
+                                    <div key={i} className="text-xs text-red-500 leading-relaxed">{typeof item === 'string' ? item.trim() : item} ✗</div>
                                   ))}
                                 </div>
                               )}
