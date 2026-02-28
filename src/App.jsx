@@ -2149,15 +2149,15 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
                               <div className="text-xs font-bold text-orange-600 mb-2">↓ 낮을 때</div>
                               {traits.lowAdv && (
                                 <div className="mb-1.5">
-                                  {traits.lowAdv.split(',').map((item, i) => (
-                                    <div key={i} className="text-xs text-green-700 leading-relaxed">✓ {item.trim()}</div>
+                                  {(Array.isArray(traits.lowAdv) ? traits.lowAdv : traits.lowAdv.split(',')).map((item, i) => (
+                                    <div key={i} className="text-xs text-green-700 leading-relaxed">✓ {typeof item === 'string' ? item.trim() : item}</div>
                                   ))}
                                 </div>
                               )}
                               {traits.lowDis && (
                                 <div>
-                                  {traits.lowDis.split(',').map((item, i) => (
-                                    <div key={i} className="text-xs text-red-500 leading-relaxed">✗ {item.trim()}</div>
+                                  {(Array.isArray(traits.lowDis) ? traits.lowDis : traits.lowDis.split(',')).map((item, i) => (
+                                    <div key={i} className="text-xs text-red-500 leading-relaxed">✗ {typeof item === 'string' ? item.trim() : item}</div>
                                   ))}
                                 </div>
                               )}
@@ -2167,15 +2167,15 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
                               <div className="text-xs font-bold text-blue-600 mb-2">↑ 높을 때</div>
                               {traits.highAdv && (
                                 <div className="mb-1.5">
-                                  {traits.highAdv.split(',').map((item, i) => (
-                                    <div key={i} className="text-xs text-green-700 leading-relaxed">✓ {item.trim()}</div>
+                                  {(Array.isArray(traits.highAdv) ? traits.highAdv : traits.highAdv.split(',')).map((item, i) => (
+                                    <div key={i} className="text-xs text-green-700 leading-relaxed">✓ {typeof item === 'string' ? item.trim() : item}</div>
                                   ))}
                                 </div>
                               )}
                               {traits.highDis && (
                                 <div>
-                                  {traits.highDis.split(',').map((item, i) => (
-                                    <div key={i} className="text-xs text-red-500 leading-relaxed">✗ {item.trim()}</div>
+                                  {(Array.isArray(traits.highDis) ? traits.highDis : traits.highDis.split(',')).map((item, i) => (
+                                    <div key={i} className="text-xs text-red-500 leading-relaxed">✗ {typeof item === 'string' ? item.trim() : item}</div>
                                   ))}
                                 </div>
                               )}
