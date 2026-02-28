@@ -1511,6 +1511,8 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
   const [subTab, setSubTab] = useState('all');
   const [viewMode, setViewMode] = useState('group');
   const [compareScales, setCompareScales] = useState(['NS', 'HA']); // 산점도 비교 지표 (2개 선택)
+  const [expandedSubScales, setExpandedSubScales] = useState(new Set()); // 하위지표 특성 펼침 상태
+  const [allSubScalesExpanded, setAllSubScalesExpanded] = useState(false); // 전체 펼치기
 
   // 메인탭 변경 시 비교지표 초기화
   React.useEffect(() => {
@@ -1521,6 +1523,10 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
     }
   }, [mainTab]);
   const reportRef = useRef(null);
+
+  // 레벨 판정 함수 (renderScaleDetail + renderIndividualReport 공용)
+  const getLevel = (value) => value >= 81 ? 'VH' : value >= 61 ? 'H' : value >= 41 ? 'M' : value >= 21 ? 'L' : 'VL';
+  const getLevelColor = (level) => ({ VH: 'bg-indigo-600', H: 'bg-blue-500', M: 'bg-gray-400', L: 'bg-orange-400', VL: 'bg-red-500' }[level] || 'bg-gray-400');
 
   const rawData = group.members;
   const temperamentScales = ['NS', 'HA', 'RD', 'PS'];
@@ -1911,7 +1917,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
     return (
       <div className="flex gap-4 h-full">
         {/* 좌측: 상위지표 세로 막대 */}
-        <div className="w-[45%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+        <div className="w-[35%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
           {/* 헤더 + 강점/약점 카드 (차트 위로 이동) */}
           <div className="flex-shrink-0">
             {/* 헤더: 기질=파랑, 성격=녹색 */}
@@ -2001,9 +2007,23 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
         </div>
 
         {/* 우측: 하위지표 가로 막대 */}
-        <div className="w-[55%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-5 py-4 border-b flex-shrink-0">
+        <div className="w-[65%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-5 py-3 border-b flex-shrink-0 flex items-center justify-between">
             <h3 className="font-bold text-gray-800">{scale} 하위지표</h3>
+            <button
+              onClick={() => {
+                if (allSubScalesExpanded) {
+                  setExpandedSubScales(new Set());
+                  setAllSubScalesExpanded(false);
+                } else {
+                  setExpandedSubScales(new Set(subCodes));
+                  setAllSubScalesExpanded(true);
+                }
+              }}
+              className="text-xs px-3 py-1.5 rounded-full border border-gray-300 text-gray-500 hover:bg-gray-200 transition font-medium"
+            >
+              {allSubScalesExpanded ? '전체 접기' : '전체 펼치기'}
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 min-h-0">
             <div className="space-y-5">
@@ -2013,11 +2033,24 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
                 const lowLabel = traits.lowLabel || subScaleLabels[code];
                 const highLabel = traits.highLabel || '';
                 const scaleName = traits.name || code;
+                const isExpanded = expandedSubScales.has(code);
                 return (
                   <div key={code} className="bg-gray-50 rounded-xl p-4">
-                    <div className="flex justify-between items-center mb-2">
+                    <div
+                      className="flex justify-between items-center mb-2 cursor-pointer select-none"
+                      onClick={() => {
+                        setExpandedSubScales(prev => {
+                          const next = new Set(prev);
+                          if (next.has(code)) { next.delete(code); } else { next.add(code); }
+                          return next;
+                        });
+                      }}
+                    >
                       <span className="text-xs text-gray-500">{lowLabel}</span>
-                      <span className="text-sm font-bold text-gray-700 bg-white px-3 py-1 rounded-full shadow-sm">{code} ({scaleName})</span>
+                      <span className="text-sm font-bold text-gray-700 bg-white px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
+                        {code} ({scaleName})
+                        <span className="text-gray-400 text-xs ml-1">{isExpanded ? '▲' : '▼'}</span>
+                      </span>
                       <span className="text-xs text-gray-500">{highLabel}</span>
                     </div>
                     {traits.coreDescription && (
@@ -2028,6 +2061,10 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
                         const val = p[code] || 0;
                         const selected = isSelected(getName(p));
                         const isTemperament = ['NS', 'HA', 'RD', 'PS'].includes(scale);
+                        // 백분위 계산 → 레벨 판정
+                        const pct = Math.round(((val - norm.m) / norm.sd + 3) / 6 * 100);
+                        const clampedPct = Math.max(0, Math.min(100, pct));
+                        const level = getLevel(clampedPct);
 
                         // Diverging bar chart for temperament (centered at mean)
                         if (isTemperament) {
@@ -2037,8 +2074,8 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
                           const isPositive = deviation >= 0;
 
                           return (
-                            <div key={getName(p)} className="flex items-center gap-3">
-                              <span className={`w-16 text-xs font-medium truncate transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
+                            <div key={getName(p)} className="flex items-center gap-2">
+                              <span className={`w-14 text-xs font-medium truncate transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
                                 {getName(p)}
                               </span>
                               <div className="flex-1 h-6 bg-gray-100 rounded relative overflow-hidden">
@@ -2057,6 +2094,9 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
                               <span className={`w-8 text-xs text-right font-bold transition ${selected ? (deviation >= 0 ? 'text-blue-600' : 'text-orange-500') : 'text-gray-300'}`}>
                                 {deviation >= 0 ? '+' : ''}{deviation.toFixed(1)}
                               </span>
+                              <span className={`w-7 text-center text-xs font-bold text-white rounded px-1 py-0.5 transition ${selected ? getLevelColor(level) : 'bg-gray-300'}`}>
+                                {level}
+                              </span>
                             </div>
                           );
                         }
@@ -2064,8 +2104,8 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
                         // Regular bar for character scales
                         const width = (val / 20) * 100;
                         return (
-                          <div key={getName(p)} className="flex items-center gap-3">
-                            <span className={`w-16 text-xs font-medium truncate transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
+                          <div key={getName(p)} className="flex items-center gap-2">
+                            <span className={`w-14 text-xs font-medium truncate transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
                               {getName(p)}
                             </span>
                             <div className="flex-1 h-6 bg-gray-200 rounded-full relative overflow-hidden">
@@ -2078,6 +2118,9 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
                             <span className={`w-6 text-xs text-right font-bold transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
                               {val}
                             </span>
+                            <span className={`w-7 text-center text-xs font-bold text-white rounded px-1 py-0.5 transition ${selected ? getLevelColor(level) : 'bg-gray-300'}`}>
+                              {level}
+                            </span>
                           </div>
                         );
                       })}
@@ -2085,6 +2128,62 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
                     <div className="text-xs text-gray-400 mt-2 text-center">
                       {['NS', 'HA', 'RD', 'PS'].includes(scale) ? `평균 M=${norm.m} (편차 표시)` : `평균 M=${norm.m}`}
                     </div>
+                    {/* 접이식 특성 영역 */}
+                    {isExpanded && (traits.lowAdv || traits.highAdv) && (() => {
+                      // 선택된 참가자의 평균 레벨로 강조 방향 결정
+                      const selectedPersons_ = rawData.filter(p => isSelected(getName(p)));
+                      let highlightSide = 'none'; // 'low', 'high', 'none'
+                      if (selectedPersons_.length > 0) {
+                        const avgPct = selectedPersons_.reduce((sum, p) => {
+                          const v = p[code] || 0;
+                          const pc = Math.round(((v - norm.m) / norm.sd + 3) / 6 * 100);
+                          return sum + Math.max(0, Math.min(100, pc));
+                        }, 0) / selectedPersons_.length;
+                        highlightSide = avgPct <= 40 ? 'low' : avgPct >= 61 ? 'high' : 'none';
+                      }
+                      return (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* 낮을 때 */}
+                            <div className={`rounded-lg p-3 transition ${highlightSide === 'low' ? 'bg-orange-50 ring-1 ring-orange-200' : 'bg-gray-100 opacity-60'}`}>
+                              <div className="text-xs font-bold text-orange-600 mb-2">↓ 낮을 때</div>
+                              {traits.lowAdv && (
+                                <div className="mb-1.5">
+                                  {traits.lowAdv.split(',').map((item, i) => (
+                                    <div key={i} className="text-xs text-green-700 leading-relaxed">✓ {item.trim()}</div>
+                                  ))}
+                                </div>
+                              )}
+                              {traits.lowDis && (
+                                <div>
+                                  {traits.lowDis.split(',').map((item, i) => (
+                                    <div key={i} className="text-xs text-red-500 leading-relaxed">✗ {item.trim()}</div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {/* 높을 때 */}
+                            <div className={`rounded-lg p-3 transition ${highlightSide === 'high' ? 'bg-blue-50 ring-1 ring-blue-200' : 'bg-gray-100 opacity-60'}`}>
+                              <div className="text-xs font-bold text-blue-600 mb-2">↑ 높을 때</div>
+                              {traits.highAdv && (
+                                <div className="mb-1.5">
+                                  {traits.highAdv.split(',').map((item, i) => (
+                                    <div key={i} className="text-xs text-green-700 leading-relaxed">✓ {item.trim()}</div>
+                                  ))}
+                                </div>
+                              )}
+                              {traits.highDis && (
+                                <div>
+                                  {traits.highDis.split(',').map((item, i) => (
+                                    <div key={i} className="text-xs text-red-500 leading-relaxed">✗ {item.trim()}</div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -2167,8 +2266,6 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
     if (!person) return null;
 
     const allScales = [...temperamentScales, ...characterScales];
-    const getLevel = (value) => value >= 81 ? 'VH' : value >= 61 ? 'H' : value >= 41 ? 'M' : value >= 21 ? 'L' : 'VL';
-    const getLevelColor = (level) => ({ VH: 'bg-indigo-600', H: 'bg-blue-500', M: 'bg-gray-400', L: 'bg-orange-400', VL: 'bg-red-500' }[level] || 'bg-gray-400');
 
     // PDF 렌더링을 위해 변수 미리 계산 (IIFE 대신)
     const nsLevel = getTScoreLevel(person.NS);
