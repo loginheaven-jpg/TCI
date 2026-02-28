@@ -23,10 +23,49 @@ const allScales = ['NS', 'HA', 'RD', 'PS', 'SD', 'CO', 'ST'];
 const temperamentScales = ['NS', 'HA', 'RD', 'PS'];
 const characterScales = ['SD', 'CO'];
 
+const AI_GATEWAY_URL = import.meta.env.VITE_AI_GATEWAY_URL || 'https://ai-gateway20251125.up.railway.app';
+
+const TCI_SYSTEM_PROMPT = `당신은 TCI(기질 및 성격 검사) 전문 심리상담사입니다.
+두 사람의 TCI 점수를 바탕으로 관계 역동을 분석합니다.
+
+## TCI 척도 해석 기준
+- NS(탐색성): 새로움 추구, 호기심. 높으면 모험적·충동적, 낮으면 안정적·신중
+- HA(불확실성 센서): 위험 감지, 불안 민감도. 높으면 신중·걱정, 낮으면 대담·낙관
+- RD(관계 민감성): 타인 반응 민감도. 높으면 정서적·의존적, 낮으면 독립적·무심
+- PS(실행 일관성): 목표 지속력, 인내. 높으면 완벽주의·끈기, 낮으면 유연·포기 빠름
+- SD(자율성): 자기조절, 책임감. 높으면 성숙·독립, 낮으면 미성숙·타인의존
+- CO(협력성): 공감, 배려. 높으면 이타적·관용, 낮으면 자기중심·공격적
+- ST(자기초월): 영적 수용, 직관. 높으면 영적·창의적, 낮으면 현실적·논리적
+
+점수 범위: 0-100 (백분위). 50이 평균.
+
+## 응답 형식 (반드시 아래 4개 섹션 ## 헤더로 구분하여 작성)
+## 핵심 역동
+(두 사람의 기질 조합이 만들어내는 관계의 핵심 패턴. 2~3문장)
+
+## 관계 강점
+(이 조합이 가진 구체적 장점 2~3가지. 점수 근거 포함)
+
+## 성장 과제
+(주의할 갈등 패턴과 원인 2~3가지. 점수 근거 포함)
+
+## 실천 제안
+(오늘부터 시작할 수 있는 구체적 행동 2~3가지)
+
+## 주의사항
+- "유사하면 공감이 잘 된다" 같은 당연한 말 금지
+- 반드시 구체적 점수 차이를 언급하며 해석할 것
+- 두 사람의 이름을 사용할 것
+- 따뜻하지만 전문적인 톤
+- 각 섹션 2~4줄 이내로 간결하게`;
+
 export default function CoupleAnalysisPage({ personA, personB, relationshipType, onBack, mainScaleTraits }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedScale, setSelectedScale] = useState('NS');
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
 
   const relType = RELATIONSHIP_TYPES[relationshipType] || RELATIONSHIP_TYPES.COUPLE;
   const nameA = personA.name || 'A';
@@ -84,6 +123,74 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
   const similarScales = allScales.filter(s => analysis[s].gapCategory === 'similar');
   const contrastScales = allScales.filter(s => analysis[s].gapCategory === 'contrast');
   const overallGap = Math.round(allScales.reduce((sum, s) => sum + analysis[s].gap, 0) / allScales.length);
+
+  // ========================================
+  // AI 심층 분석
+  // ========================================
+  const buildAnalysisPrompt = () => {
+    const scoresA = allScales.map(s => `${s}=${analysis[s].scoreA}`).join(', ');
+    const scoresB = allScales.map(s => `${s}=${analysis[s].scoreB}`).join(', ');
+    const contrastList = contrastScales.map(s => `${scaleLabels[s]}(차이 ${analysis[s].gap})`).join(', ');
+    const similarList = similarScales.map(s => `${scaleLabels[s]}(차이 ${analysis[s].gap})`).join(', ');
+    return `[관계 유형] ${relType.label}
+[${nameA}] ${scoresA}
+[${nameB}] ${scoresB}
+[차이가 큰 지표] ${contrastList || '없음'}
+[유사한 지표] ${similarList || '없음'}
+[전체 평균 차이] ${overallGap}점
+
+이 두 사람의 관계를 TCI 전문가 관점에서 심층 분석해주세요.`;
+  };
+
+  const fetchAiAnalysis = async () => {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const response = await fetch(`${AI_GATEWAY_URL}/api/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'claude',
+          messages: [{ role: 'user', content: buildAnalysisPrompt() }],
+          system_prompt: TCI_SYSTEM_PROMPT,
+          max_tokens: 2048,
+          temperature: 0.7
+        })
+      });
+      if (!response.ok) throw new Error(`API 오류 (${response.status})`);
+      const data = await response.json();
+      setAiAnalysis(data.content);
+    } catch (err) {
+      setAiError(err.message || 'AI 분석 중 오류가 발생했습니다.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // AI 응답을 ## 헤더 기준으로 섹션 파싱
+  const parseAiSections = (text) => {
+    if (!text) return [];
+    const sectionConfigs = [
+      { key: '핵심 역동', icon: '🔮', bg: 'bg-purple-50', border: 'border-purple-100', title: 'text-purple-700', body: 'text-purple-800' },
+      { key: '관계 강점', icon: '💪', bg: 'bg-green-50', border: 'border-green-100', title: 'text-green-700', body: 'text-green-800' },
+      { key: '성장 과제', icon: '🌱', bg: 'bg-amber-50', border: 'border-amber-100', title: 'text-amber-700', body: 'text-amber-800' },
+      { key: '실천 제안', icon: '✅', bg: 'bg-blue-50', border: 'border-blue-100', title: 'text-blue-700', body: 'text-blue-800' }
+    ];
+    const sections = [];
+    for (const cfg of sectionConfigs) {
+      const regex = new RegExp(`##\\s*${cfg.key}[\\s\\S]*?(?=##|$)`, 'i');
+      const match = text.match(regex);
+      if (match) {
+        const content = match[0].replace(/##\s*[^\n]+\n?/, '').trim();
+        if (content) sections.push({ ...cfg, content });
+      }
+    }
+    // 파싱 실패 시 전체 텍스트를 하나의 카드로
+    if (sections.length === 0) {
+      sections.push({ key: 'AI 분석', icon: '🤖', bg: 'bg-gray-50', border: 'border-gray-200', title: 'text-gray-700', body: 'text-gray-800', content: text });
+    }
+    return sections;
+  };
 
   // 핵심 역동 요약 생성
   const getCoreDynamic = () => {
@@ -229,41 +336,80 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
           </div>
         </div>
 
-        {/* 강점 / 성장 포인트 */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-green-50 rounded-2xl p-5 border border-green-100">
-            <h4 className="font-bold text-green-700 mb-3">관계 강점</h4>
-            <ul className="space-y-2">
-              {similarScales.length > 0 ? similarScales.map(s => (
-                <li key={s} className="flex items-start gap-2 text-sm text-green-700">
-                  <span className="mt-0.5">✓</span>
-                  <span>{scaleLabels[s]} 유사 → 이 영역에서 자연스러운 공감이 이뤄집니다</span>
-                </li>
-              )) : <li className="text-sm text-green-600">다양한 차이가 관계의 풍성함을 만들어냅니다</li>}
-              {resilience >= 50 && (
-                <li className="flex items-start gap-2 text-sm text-green-700">
-                  <span className="mt-0.5">✓</span>
-                  <span>성격 성숙도가 양호하여 갈등 조율 능력이 있습니다</span>
-                </li>
-              )}
-            </ul>
+        {/* AI 심층 분석 */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-violet-600 to-purple-700 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🤖</span>
+              <div>
+                <h4 className="font-bold text-white text-lg">AI 심층 분석</h4>
+                <p className="text-violet-200 text-xs">Claude가 두 분의 TCI 데이터를 기반으로 분석합니다</p>
+              </div>
+            </div>
+            {aiAnalysis && !aiLoading && (
+              <button
+                onClick={fetchAiAnalysis}
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-medium transition"
+              >
+                다시 분석
+              </button>
+            )}
           </div>
-          <div className="bg-amber-50 rounded-2xl p-5 border border-amber-100">
-            <h4 className="font-bold text-amber-700 mb-3">성장 포인트</h4>
-            <ul className="space-y-2">
-              {contrastScales.length > 0 ? contrastScales.map(s => (
-                <li key={s} className="flex items-start gap-2 text-sm text-amber-700">
-                  <span className="mt-0.5">△</span>
-                  <span>{scaleLabels[s]} 차이 → 서로의 관점 차이를 대화로 좁혀보세요</span>
-                </li>
-              )) : <li className="text-sm text-amber-600">전반적으로 큰 차이가 없어 안정적입니다</li>}
-              {resilience < 50 && (
-                <li className="flex items-start gap-2 text-sm text-amber-700">
-                  <span className="mt-0.5">△</span>
-                  <span>성격 성숙도 향상이 관계 안정에 도움이 됩니다</span>
-                </li>
-              )}
-            </ul>
+          <div className="p-6">
+            {/* 초기 상태: 분석 버튼 */}
+            {!aiAnalysis && !aiLoading && !aiError && (
+              <div className="text-center py-8">
+                <p className="text-gray-500 text-sm mb-4">두 사람의 점수 패턴을 AI가 심층 분석하여<br/>구체적인 관계 역동과 실천 제안을 제공합니다.</p>
+                <button
+                  onClick={fetchAiAnalysis}
+                  className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-medium hover:from-violet-700 hover:to-purple-700 transition shadow-lg shadow-violet-200"
+                >
+                  AI 심층 분석 시작
+                </button>
+              </div>
+            )}
+            {/* 로딩 중 */}
+            {aiLoading && (
+              <div className="space-y-4 py-4">
+                {['핵심 역동 분석 중...', '관계 강점 도출 중...', '성장 과제 파악 중...', '실천 제안 생성 중...'].map((text, i) => (
+                  <div key={i} className="animate-pulse flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gray-200"></div>
+                    <div className="flex-1">
+                      <div className="h-3 bg-gray-200 rounded w-24 mb-2"></div>
+                      <div className="h-2 bg-gray-100 rounded w-full"></div>
+                    </div>
+                  </div>
+                ))}
+                <p className="text-center text-sm text-violet-500 font-medium mt-4">AI가 분석 중입니다...</p>
+              </div>
+            )}
+            {/* 에러 */}
+            {aiError && (
+              <div className="text-center py-6">
+                <p className="text-red-500 text-sm mb-3">{aiError}</p>
+                <button
+                  onClick={fetchAiAnalysis}
+                  className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition border border-red-200"
+                >
+                  다시 시도
+                </button>
+              </div>
+            )}
+            {/* 분석 결과 */}
+            {aiAnalysis && !aiLoading && (
+              <div className="grid grid-cols-2 gap-4">
+                {parseAiSections(aiAnalysis).map((section, idx) => (
+                  <div key={idx} className={`${section.bg} rounded-xl p-5 border ${section.border}`}>
+                    <h5 className={`font-bold ${section.title} mb-2 flex items-center gap-2`}>
+                      <span>{section.icon}</span> {section.key}
+                    </h5>
+                    <div className={`text-sm ${section.body} leading-relaxed whitespace-pre-line`}>
+                      {section.content}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
