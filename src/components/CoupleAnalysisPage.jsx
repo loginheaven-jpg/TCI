@@ -291,49 +291,45 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
           </ResponsiveContainer>
         </div>
 
-        {/* 나비 차트 (Butterfly Chart) */}
+        {/* 기질 비교 (상하 비교 바) */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-          <h4 className="font-bold text-gray-700 mb-4">지표별 차이 비교</h4>
-          {/* 헤더 */}
-          <div className="flex items-center mb-3">
-            <div className="flex-1 text-right text-sm font-bold pr-2" style={{ color: COLOR_A }}>{nameA}</div>
-            <div className="w-20"></div>
-            <div className="flex-1 text-left text-sm font-bold pl-2" style={{ color: COLOR_B }}>{nameB}</div>
+          <h4 className="font-bold text-gray-700 mb-1">기질 비교</h4>
+          <p className="text-xs text-gray-400 mb-4">선천적 특성 — 차이는 서로를 보완하는 자원입니다</p>
+          {/* 범례 */}
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLOR_A }}></div><span className="text-xs font-medium text-gray-600">{nameA}</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLOR_B }}></div><span className="text-xs font-medium text-gray-600">{nameB}</span></div>
           </div>
-          <div className="space-y-2.5">
-            {allScales.map(s => {
+          <div className="space-y-4">
+            {temperamentScales.map(s => {
               const d = analysis[s];
               const gapCol = getGapColor(d.gapCategory);
-              const maxScore = 100;
-              const widthA = (d.scoreA / maxScore) * 100;
-              const widthB = (d.scoreB / maxScore) * 100;
               return (
-                <div key={s} className="flex items-center">
-                  {/* A 점수 */}
-                  <div className="w-8 text-right text-xs font-bold" style={{ color: COLOR_A }}>{d.scoreA}</div>
-                  {/* A 바 (오른쪽→왼쪽) */}
-                  <div className="flex-1 flex justify-end h-7 bg-gray-50 rounded-l-lg overflow-hidden ml-1.5">
-                    <div
-                      className="h-full rounded-l-lg transition-all duration-500"
-                      style={{ width: `${widthA}%`, backgroundColor: COLOR_A, opacity: 0.75 }}
-                    />
-                  </div>
-                  {/* 중앙: 지표명 + 갭 */}
-                  <div className="w-20 flex flex-col items-center px-1 flex-shrink-0">
-                    <span className="text-xs font-bold text-gray-700 leading-tight">{scaleLabels[s]}</span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-0.5 ${gapCol.bg} ${gapCol.text}`}>
-                      {d.gap} {getGapLabel(d.gapCategory)}
+                <div key={s} className="flex items-center gap-3">
+                  {/* 좌측: 지표명 + 차이 뱃지 */}
+                  <div className="w-24 flex-shrink-0">
+                    <div className="text-sm font-bold text-gray-700">{scaleLabels[s]}</div>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${gapCol.bg} ${gapCol.text}`}>
+                      차이 {d.gap} · {getGapLabel(d.gapCategory)}
                     </span>
                   </div>
-                  {/* B 바 (왼쪽→오른쪽) */}
-                  <div className="flex-1 h-7 bg-gray-50 rounded-r-lg overflow-hidden mr-1.5">
-                    <div
-                      className="h-full rounded-r-lg transition-all duration-500"
-                      style={{ width: `${widthB}%`, backgroundColor: COLOR_B, opacity: 0.75 }}
-                    />
+                  {/* 우측: 상하 비교 바 */}
+                  <div className="flex-1 space-y-1">
+                    {/* A 바 */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${d.scoreA}%`, backgroundColor: COLOR_A, opacity: 0.8 }} />
+                      </div>
+                      <span className="w-7 text-xs font-bold text-right" style={{ color: COLOR_A }}>{d.scoreA}</span>
+                    </div>
+                    {/* B 바 */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${d.scoreB}%`, backgroundColor: COLOR_B, opacity: 0.8 }} />
+                      </div>
+                      <span className="w-7 text-xs font-bold text-right" style={{ color: COLOR_B }}>{d.scoreB}</span>
+                    </div>
                   </div>
-                  {/* B 점수 */}
-                  <div className="w-8 text-left text-xs font-bold" style={{ color: COLOR_B }}>{d.scoreB}</div>
                 </div>
               );
             })}
@@ -342,6 +338,50 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> 유사(차이≤10)</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500"></span> 보통(11~25)</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span> 대비(26+)</span>
+          </div>
+        </div>
+
+        {/* 성격 (각자의 성숙도) */}
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <h4 className="font-bold text-gray-700 mb-1">성격 성숙도</h4>
+          <p className="text-xs text-gray-400 mb-4">노력으로 성장 가능한 영역 — 각자의 현재 수준입니다</p>
+          <div className="grid grid-cols-2 gap-6">
+            {/* A */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLOR_A }}></div>
+                <span className="text-sm font-bold text-gray-700">{nameA}</span>
+              </div>
+              <div className="space-y-2.5">
+                {['SD', 'CO', 'ST'].map(s => (
+                  <div key={s} className="flex items-center gap-2">
+                    <span className="w-16 text-xs text-gray-500 text-right">{scaleLabels[s]}</span>
+                    <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${analysis[s].scoreA}%`, backgroundColor: COLOR_A, opacity: 0.7 }} />
+                    </div>
+                    <span className="w-7 text-xs font-bold text-right" style={{ color: COLOR_A }}>{analysis[s].scoreA}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* B */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLOR_B }}></div>
+                <span className="text-sm font-bold text-gray-700">{nameB}</span>
+              </div>
+              <div className="space-y-2.5">
+                {['SD', 'CO', 'ST'].map(s => (
+                  <div key={s} className="flex items-center gap-2">
+                    <span className="w-16 text-xs text-gray-500 text-right">{scaleLabels[s]}</span>
+                    <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${analysis[s].scoreB}%`, backgroundColor: COLOR_B, opacity: 0.7 }} />
+                    </div>
+                    <span className="w-7 text-xs font-bold text-right" style={{ color: COLOR_B }}>{analysis[s].scoreB}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
