@@ -412,9 +412,13 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
                     <h5 className={`font-bold ${section.title} mb-2 flex items-center gap-2`}>
                       <span>{section.icon}</span> {section.key}
                     </h5>
-                    <div className={`text-sm ${section.body} leading-relaxed whitespace-pre-line`}>
-                      {section.content}
-                    </div>
+                    <div className={`text-sm ${section.body} leading-relaxed whitespace-pre-line`}
+                      dangerouslySetInnerHTML={{ __html: section.content
+                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                        .replace(/^- /gm, '• ')
+                      }}
+                    />
                   </div>
                 ))}
               </div>
