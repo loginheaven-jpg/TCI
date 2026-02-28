@@ -175,28 +175,49 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
           </ResponsiveContainer>
         </div>
 
-        {/* 갭 바 차트 */}
+        {/* 나비 차트 (Butterfly Chart) */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
           <h4 className="font-bold text-gray-700 mb-4">지표별 차이 비교</h4>
-          <div className="space-y-3">
+          {/* 헤더 */}
+          <div className="flex items-center mb-3">
+            <div className="flex-1 text-right text-sm font-bold pr-2" style={{ color: COLOR_A }}>{nameA}</div>
+            <div className="w-20"></div>
+            <div className="flex-1 text-left text-sm font-bold pl-2" style={{ color: COLOR_B }}>{nameB}</div>
+          </div>
+          <div className="space-y-2.5">
             {allScales.map(s => {
               const d = analysis[s];
               const gapCol = getGapColor(d.gapCategory);
+              const maxScore = 100;
+              const widthA = (d.scoreA / maxScore) * 100;
+              const widthB = (d.scoreB / maxScore) * 100;
               return (
-                <div key={s} className="flex items-center gap-3">
-                  <div className="w-20 text-right text-sm font-medium text-gray-600">{scaleLabels[s]}</div>
-                  <div className="flex-1 flex items-center gap-2">
-                    {/* A bar */}
-                    <div className="w-12 text-right text-xs font-medium" style={{ color: COLOR_A }}>{d.scoreA}</div>
-                    <div className="flex-1 relative h-6 bg-gray-50 rounded-full overflow-hidden">
-                      <div className="absolute left-0 top-0 h-full rounded-l-full" style={{ width: `${d.scoreA}%`, backgroundColor: COLOR_A, opacity: 0.7 }}></div>
-                      <div className="absolute left-0 top-0 h-full rounded-l-full border-r-2 border-white" style={{ width: `${d.scoreB}%`, backgroundColor: COLOR_B, opacity: 0.4 }}></div>
-                    </div>
-                    <div className="w-12 text-left text-xs font-medium" style={{ color: COLOR_B }}>{d.scoreB}</div>
+                <div key={s} className="flex items-center">
+                  {/* A 점수 */}
+                  <div className="w-8 text-right text-xs font-bold" style={{ color: COLOR_A }}>{d.scoreA}</div>
+                  {/* A 바 (오른쪽→왼쪽) */}
+                  <div className="flex-1 flex justify-end h-7 bg-gray-50 rounded-l-lg overflow-hidden ml-1.5">
+                    <div
+                      className="h-full rounded-l-lg transition-all duration-500"
+                      style={{ width: `${widthA}%`, backgroundColor: COLOR_A, opacity: 0.75 }}
+                    />
                   </div>
-                  <div className={`w-16 text-center text-xs font-bold px-2 py-1 rounded-full ${gapCol.bg} ${gapCol.text}`}>
-                    {d.gap} {getGapLabel(d.gapCategory)}
+                  {/* 중앙: 지표명 + 갭 */}
+                  <div className="w-20 flex flex-col items-center px-1 flex-shrink-0">
+                    <span className="text-xs font-bold text-gray-700 leading-tight">{scaleLabels[s]}</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-0.5 ${gapCol.bg} ${gapCol.text}`}>
+                      {d.gap} {getGapLabel(d.gapCategory)}
+                    </span>
                   </div>
+                  {/* B 바 (왼쪽→오른쪽) */}
+                  <div className="flex-1 h-7 bg-gray-50 rounded-r-lg overflow-hidden mr-1.5">
+                    <div
+                      className="h-full rounded-r-lg transition-all duration-500"
+                      style={{ width: `${widthB}%`, backgroundColor: COLOR_B, opacity: 0.75 }}
+                    />
+                  </div>
+                  {/* B 점수 */}
+                  <div className="w-8 text-left text-xs font-bold" style={{ color: COLOR_B }}>{d.scoreB}</div>
                 </div>
               );
             })}
