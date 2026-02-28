@@ -9,7 +9,7 @@ import {
   RELATIONSHIP_TYPES, TEMPERAMENT_DYNAMICS, CHARACTER_INTERACTIONS,
   COMMUNICATION_RULES, CONFLICT_RESOLUTION_STEPS, GROWTH_ROADMAP,
   getCoupleLevel, toInterpretLevel, getLevelLabel, getLevelColor5,
-  getGapCategory, getCombinationKey, getGapLabel, getGapColor
+  getGapCategory, getCombinationKey, getGapColor
 } from '../data/coupleInterpretations';
 
 const scaleLabels = {
@@ -291,51 +291,84 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
           </ResponsiveContainer>
         </div>
 
-        {/* 기질 비교 (상하 비교 바) */}
+        {/* 기질 비교 (덤벨 도트 차트) */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
           <h4 className="font-bold text-gray-700 mb-1">기질 비교</h4>
-          <p className="text-xs text-gray-400 mb-4">선천적 특성 — 차이는 서로를 보완하는 자원입니다</p>
-          {/* 범례 */}
+          <p className="text-xs text-gray-400 mb-4">선천적 특성 — 두 점 사이의 거리가 차이를 나타냅니다</p>
           <div className="flex items-center gap-4 mb-4">
             <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLOR_A }}></div><span className="text-xs font-medium text-gray-600">{nameA}</span></div>
             <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLOR_B }}></div><span className="text-xs font-medium text-gray-600">{nameB}</span></div>
           </div>
-          <div className="space-y-4">
-            {temperamentScales.map(s => {
-              const d = analysis[s];
-              const gapCol = getGapColor(d.gapCategory);
-              return (
-                <div key={s} className="flex items-center gap-3">
-                  {/* 좌측: 지표명 + 차이 뱃지 */}
-                  <div className="w-24 flex-shrink-0">
-                    <div className="text-sm font-bold text-gray-700">{scaleLabels[s]}</div>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${gapCol.bg} ${gapCol.text}`}>
-                      차이 {d.gap} · {getGapLabel(d.gapCategory)}
-                    </span>
-                  </div>
-                  {/* 우측: 상하 비교 바 */}
-                  <div className="flex-1 space-y-1">
-                    {/* A 바 */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${d.scoreA}%`, backgroundColor: COLOR_A, opacity: 0.8 }} />
-                      </div>
-                      <span className="w-7 text-xs font-bold text-right" style={{ color: COLOR_A }}>{d.scoreA}</span>
-                    </div>
-                    {/* B 바 */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${d.scoreB}%`, backgroundColor: COLOR_B, opacity: 0.8 }} />
-                      </div>
-                      <span className="w-7 text-xs font-bold text-right" style={{ color: COLOR_B }}>{d.scoreB}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex gap-4 mt-4 text-xs text-gray-500 justify-center">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> 유사(차이≤10)</span>
+          {(() => {
+            const traitDir = {
+              NS: { low: '안정·신중', high: '모험·혁신' },
+              HA: { low: '대담·낙관', high: '세심·준비' },
+              RD: { low: '독립·자율', high: '공감·연결' },
+              PS: { low: '유연·적응', high: '끈기·완수' }
+            };
+            const gapSvg = {
+              similar: { fill: '#dcfce7', stroke: '#bbf7d0', text: '#166534' },
+              moderate: { fill: '#fef9c3', stroke: '#fde68a', text: '#854d0e' },
+              contrast: { fill: '#fee2e2', stroke: '#fecaca', text: '#991b1b' }
+            };
+            const tL = 90, tR = 478, tW = tR - tL;
+            const toX = (v) => tL + (v / 100) * tW;
+            const rowH = 85, svgH = temperamentScales.length * rowH + 24;
+            return (
+              <svg viewBox={`0 0 560 ${svgH}`} className="w-full">
+                {/* 배경 영역 */}
+                <rect x={tL} y={8} width={toX(50) - tL} height={temperamentScales.length * rowH - 8} fill="#fafafa" opacity={0.3} rx={2} />
+                <rect x={toX(50)} y={8} width={tR - toX(50)} height={temperamentScales.length * rowH - 8} fill="#f0fdf4" opacity={0.15} rx={2} />
+                {/* 세로 눈금선 */}
+                {[0, 25, 50, 75, 100].map(v => (
+                  <g key={v}>
+                    <line x1={toX(v)} y1={8} x2={toX(v)} y2={temperamentScales.length * rowH} stroke={v === 50 ? '#d1d5db' : '#f3f4f6'} strokeWidth={0.5} strokeDasharray={v === 50 ? '4,3' : 'none'} />
+                    <text x={toX(v)} y={svgH - 2} textAnchor="middle" fill={v === 50 ? '#9ca3af' : '#d1d5db'} fontSize={9} fontWeight={v === 50 ? 600 : 400}>{v}</text>
+                  </g>
+                ))}
+                {/* 각 기질 척도 */}
+                {temperamentScales.map((s, i) => {
+                  const d = analysis[s];
+                  const cy = i * rowH + 45;
+                  const xA = toX(d.scoreA);
+                  const xB = toX(d.scoreB);
+                  const lo = Math.min(xA, xB), hi = Math.max(xA, xB);
+                  const gc = gapSvg[d.gapCategory] || gapSvg.moderate;
+                  const tr = traitDir[s];
+                  const near = Math.abs(xA - xB) < 28;
+                  const aLabelY = near && d.scoreA < d.scoreB ? cy + 23 : cy - 16;
+                  const bLabelY = near && d.scoreB <= d.scoreA ? cy + 23 : cy - 16;
+                  return (
+                    <g key={s}>
+                      {/* 지표명 */}
+                      <text x={0} y={cy - 6} fill="#374151" fontSize={12} fontWeight={700}>{scaleLabels[s]}</text>
+                      <text x={0} y={cy + 8} fill="#9ca3af" fontSize={9}>({s})</text>
+                      {/* 트랙 */}
+                      <rect x={tL} y={cy - 14} width={tW} height={28} rx={14} fill="#f9fafb" stroke="#e5e7eb" strokeWidth={0.5} />
+                      <line x1={toX(50)} y1={cy - 8} x2={toX(50)} y2={cy + 8} stroke="#d1d5db" strokeWidth={1} strokeDasharray="2,2" />
+                      {/* 차이 구간 하이라이트 + 연결선 */}
+                      {hi - lo > 2 && <rect x={lo} y={cy - 7} width={hi - lo} height={14} rx={7} fill={gc.fill} opacity={0.5} />}
+                      {hi - lo > 2 && <line x1={lo} y1={cy} x2={hi} y2={cy} stroke="#94a3b8" strokeWidth={2} strokeLinecap="round" opacity={0.4} />}
+                      {/* A 도트 */}
+                      <circle cx={xA} cy={cy} r={9} fill={COLOR_A} stroke="white" strokeWidth={2.5} style={{ filter: 'drop-shadow(0 1px 3px rgba(96,165,250,0.4))' }} />
+                      <text x={xA} y={aLabelY} textAnchor="middle" fill="#3B82F6" fontSize={10} fontWeight={700}>{d.scoreA}</text>
+                      {/* B 도트 */}
+                      <circle cx={xB} cy={cy} r={9} fill={COLOR_B} stroke="white" strokeWidth={2.5} style={{ filter: 'drop-shadow(0 1px 3px rgba(249,115,22,0.4))' }} />
+                      <text x={xB} y={bLabelY} textAnchor="middle" fill="#EA580C" fontSize={10} fontWeight={700}>{d.scoreB}</text>
+                      {/* 차이 뱃지 */}
+                      <rect x={498} y={cy - 10} width={56} height={20} rx={10} fill={gc.fill} stroke={gc.stroke} strokeWidth={0.5} />
+                      <text x={526} y={cy + 4} textAnchor="middle" fill={gc.text} fontSize={9} fontWeight={700}>차이 {d.gap}</text>
+                      {/* 양 끝 특성 라벨 */}
+                      <text x={tL + 4} y={cy + 28} fill="#d1d5db" fontSize={8}>← {tr.low}</text>
+                      <text x={tR - 4} y={cy + 28} textAnchor="end" fill="#d1d5db" fontSize={8}>{tr.high} →</text>
+                    </g>
+                  );
+                })}
+              </svg>
+            );
+          })()}
+          <div className="flex gap-4 mt-2 text-xs text-gray-500 justify-center">
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> 유사(≤10)</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500"></span> 보통(11~25)</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span> 대비(26+)</span>
           </div>
