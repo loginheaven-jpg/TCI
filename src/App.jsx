@@ -589,6 +589,8 @@ export default function App() {
   const [showNameMappingModal, setShowNameMappingModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null); // 수정 중인 그룹
   const [isIndividualMode, setIsIndividualMode] = useState(false); // 개인진단 모드
+  const [individualSelectMode, setIndividualSelectMode] = useState('upload'); // 'upload' or 'select'
+  const [individualSelectedMember, setIndividualSelectedMember] = useState(null); // 기존 멤버 선택
 
   // 커플분석 관련 state
   const [couplePersonA, setCouplePersonA] = useState(null); // Person A 데이터
@@ -948,7 +950,7 @@ export default function App() {
                 </svg>
                 지표 설정
               </button>
-              <button onClick={() => { setIsIndividualMode(true); setPage('create'); }}
+              <button onClick={() => { setIsIndividualMode(true); setIndividualSelectMode('upload'); setIndividualSelectedMember(null); setUploadedData(null); setNewGroup({ name: '', desc: '' }); setPage('create'); }}
                 className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2">
                 <span className="text-xl">👤</span> 개인진단
               </button>
@@ -1028,8 +1030,30 @@ export default function App() {
           </button>
           <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-xl">
             <h2 className="text-2xl font-bold text-gray-800 mb-2">{isIndividualMode ? '개인 진단' : '새 그룹 만들기'}</h2>
-            <p className="text-gray-500 mb-8">{isIndividualMode ? '1명의 CSV 파일을 업로드하여 개인 진단을 시작하세요.' : 'CSV 파일을 업로드하여 그룹을 생성하세요.'}</p>
-            
+            <p className="text-gray-500 mb-6">{isIndividualMode ? '개인 TCI 진단을 시작합니다.' : 'CSV 파일을 업로드하여 그룹을 생성하세요.'}</p>
+
+            {/* 개인진단 모드: 입력 방식 선택 탭 */}
+            {isIndividualMode && (
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">데이터 입력 방식</label>
+                <div className="flex gap-2">
+                  <button onClick={() => { setIndividualSelectMode('upload'); setIndividualSelectedMember(null); }}
+                    className={`flex-1 p-3 rounded-xl border-2 text-center transition-all ${individualSelectMode === 'upload' ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <div className="text-xl mb-1">📄</div>
+                    <div className="text-xs font-medium text-gray-700">CSV 업로드</div>
+                  </button>
+                  <button onClick={() => { setIndividualSelectMode('select'); setUploadedData(null); setNewGroup({ name: '', desc: '' }); }}
+                    disabled={groups.flatMap(g => g.members).length === 0}
+                    className={`flex-1 p-3 rounded-xl border-2 text-center transition-all ${individualSelectMode === 'select' ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'} ${groups.flatMap(g => g.members).length === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                    <div className="text-xl mb-1">👥</div>
+                    <div className="text-xs font-medium text-gray-700">기존 검사자 선택</div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* CSV 업로드 모드 (그룹생성 또는 개인진단-upload) */}
+            {(!isIndividualMode || individualSelectMode === 'upload') && (
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">{isIndividualMode ? '이름 *' : '그룹명 *'}</label>
@@ -1037,14 +1061,14 @@ export default function App() {
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                   placeholder={isIndividualMode ? '예: 홍길동' : '예: ACC전문코치반 2501기'} />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">설명 (선택)</label>
                 <input type="text" value={newGroup.desc} onChange={(e) => setNewGroup({...newGroup, desc: e.target.value})}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                   placeholder="예: 전문코치 양성과정 1기" />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">CSV 파일 업로드 *</label>
                 <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-blue-400 transition cursor-pointer">
@@ -1089,6 +1113,92 @@ export default function App() {
                 </button>
               </div>
             </div>
+            )}
+
+            {/* 개인진단 - 기존 검사자 선택 모드 */}
+            {isIndividualMode && individualSelectMode === 'select' && (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">검사자 선택</label>
+                  <div className="border-2 rounded-xl p-4 border-emerald-200 bg-emerald-50/30">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm font-bold">👤</span>
+                      <span className="font-semibold text-gray-700">
+                        {individualSelectedMember ? individualSelectedMember.name : '검사자를 선택하세요'}
+                      </span>
+                      {individualSelectedMember && <span className="text-green-500 text-sm">✓ 선택됨</span>}
+                    </div>
+                    <select
+                      onChange={(e) => {
+                        const [gIdx, mIdx] = e.target.value.split('-').map(Number);
+                        if (!isNaN(gIdx) && !isNaN(mIdx)) {
+                          const member = groups[gIdx]?.members[mIdx];
+                          if (member) setIndividualSelectedMember({ ...member, groupName: groups[gIdx].name, groupId: groups[gIdx].id, groupIndex: gIdx });
+                        }
+                      }}
+                      className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                      defaultValue=""
+                    >
+                      <option value="" disabled>멤버를 선택하세요</option>
+                      {groups.map((g, gIdx) => (
+                        <optgroup key={gIdx} label={g.name}>
+                          {g.members.map((m, mIdx) => (
+                            <option key={`${gIdx}-${mIdx}`} value={`${gIdx}-${mIdx}`}>{m.name} ({m.originalName || m.name})</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* 선택된 검사자 프리뷰 */}
+                {individualSelectedMember && (
+                  <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-green-600 text-lg">✓</span>
+                      <span className="text-green-700 font-semibold">{individualSelectedMember.name}</span>
+                      <span className="text-gray-400 text-sm">({individualSelectedMember.groupName})</span>
+                    </div>
+                    <div className="grid grid-cols-7 gap-2">
+                      {['NS', 'HA', 'RD', 'PS', 'SD', 'CO', 'ST'].map(s => (
+                        <div key={s} className="text-center bg-white rounded-lg py-1.5 border border-emerald-100">
+                          <div className="text-[10px] text-gray-400">{s}</div>
+                          <div className="text-sm font-bold text-gray-700">{individualSelectedMember[s] || 0}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-4 pt-4">
+                  <button onClick={() => setPage('list')}
+                    className="flex-1 px-6 py-3 border border-gray-200 rounded-xl text-gray-600 font-medium hover:bg-gray-50 transition">
+                    취소
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!individualSelectedMember) return;
+                      // 해당 멤버가 속한 그룹을 찾아서 analysis 페이지로 이동
+                      const group = groups[individualSelectedMember.groupIndex];
+                      if (group) {
+                        // 1명짜리 가상 그룹 생성 (해당 멤버만 포함)
+                        const virtualGroup = {
+                          ...group,
+                          name: individualSelectedMember.name,
+                          members: [individualSelectedMember]
+                        };
+                        setSelectedGroup(virtualGroup);
+                        setPage('analysis');
+                      }
+                    }}
+                    disabled={!individualSelectedMember}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-medium hover:from-emerald-600 hover:to-emerald-700 disabled:from-gray-300 disabled:to-gray-300 disabled:cursor-not-allowed transition shadow-lg shadow-emerald-500/25 disabled:shadow-none"
+                  >
+                    진단 시작
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
