@@ -1732,7 +1732,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provider: 'claude',
+          provider: 'claude-sonnet',
           messages: [{ role: 'user', content: prompt }],
           system_prompt: INDIVIDUAL_TCI_SYSTEM_PROMPT,
           max_tokens: 2048,

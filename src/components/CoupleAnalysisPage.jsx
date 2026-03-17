@@ -159,7 +159,7 @@ export default function CoupleAnalysisPage({ personA, personB, relationshipType,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provider: 'claude',
+          provider: 'claude-sonnet',
           messages: [{ role: 'user', content: buildAnalysisPrompt() }],
           system_prompt: TCI_SYSTEM_PROMPT,
           max_tokens: 2048,
