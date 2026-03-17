@@ -12,7 +12,7 @@ import {
   CHARACTER_TYPES,
   TEMPERAMENT_INTERACTIONS,
   getTScoreLevel,
-  checkPersonalityDisorderTendency
+  checkCharacterGrowthNeeds
 } from './data/interpretations';
 
 // ========================================
@@ -2390,7 +2390,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
     const charTypeCode = `${sdLevel}${coLevel}${stLevel}`;
     const charType = CHARACTER_TYPES[charTypeCode];
 
-    const maturityCheck = checkPersonalityDisorderTendency(person.SD, person.CO);
+    const maturityCheck = checkCharacterGrowthNeeds(person.SD, person.CO);
 
     const interactions = [
       { key: 'NS-HA', code: `${nsLevel}${haLevel}`, label: 'NS × HA', desc: '탐색성과 불확실성 센서의 상호작용' },
@@ -2581,7 +2581,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
 
           <div className="space-y-4">
             {interactions.map(({ key, code, label, desc }) => {
-              const interactionData = TEMPERAMENT_INTERACTIONS[key]?.[code];
+              const interactionData = TEMPERAMENT_INTERACTIONS[key]?.combinations?.[code];
               if (!interactionData) return null;
 
               return (
