@@ -2596,14 +2596,14 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
               </div>
               <div>
                 <h3 className={`font-bold text-lg mb-2 ${maturityCheck.severity === 'high' ? 'text-red-700' : 'text-amber-700'}`}>
-                  성격 성숙도 주의
+                  성격 성장 포인트
                 </h3>
                 <p className={`text-sm ${maturityCheck.severity === 'high' ? 'text-red-600' : 'text-amber-600'}`}>
                   {maturityCheck.message}
                 </p>
                 {maturityCheck.severity === 'high' && (
                   <p className="text-sm text-red-500 mt-2">
-                    전문적인 상담이 권장됩니다.
+                    코칭과 병행하여 전문 심리상담을 받으시면 더 효과적입니다.
                   </p>
                 )}
               </div>
