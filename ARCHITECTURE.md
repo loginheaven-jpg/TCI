@@ -319,7 +319,7 @@ const pct = Math.round(((value - norm.m) / norm.sd + 3) / 6 * 100);
 | `scaleTraits` | 하위 23척도 해석: name, description, lowLabel/highLabel, lowAdv/highAdv |
 | `norms` | 하위척도 규준: 각 {m (평균), sd (표준편차)} |
 | `TEMPERAMENT_INTERACTIONS` | 기질 척도간 상호작용 (NS×HA, NS×RD, HA×RD) |
-| `PERSONALITY_DISORDER_MAP` | 기질유형별 성격장애 경향성 (참고용) |
+| `checkCharacterGrowthNeeds` | 성격 성장 필요 영역 체크 (SD/CO 백분위 기반) |
 
 ### 9.2 coupleInterpretations.js (547줄)
 
