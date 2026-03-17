@@ -1624,6 +1624,19 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
   const [expandedSubScales, setExpandedSubScales] = useState(new Set()); // 하위지표 특성 펼침 상태
   const [allSubScalesExpanded, setAllSubScalesExpanded] = useState(false); // 전체 펼치기
 
+  // 개인 AI 코칭 분석
+  const [individualAiAnalysis, setIndividualAiAnalysis] = useState(null);
+  const [individualAiLoading, setIndividualAiLoading] = useState(false);
+  const [individualAiError, setIndividualAiError] = useState(null);
+
+  const AI_GATEWAY_URL = import.meta.env.VITE_AI_GATEWAY_URL || 'https://ai-gateway20251125.up.railway.app';
+
+  // 멤버 선택 변경 시 AI 분석 초기화
+  React.useEffect(() => {
+    setIndividualAiAnalysis(null);
+    setIndividualAiError(null);
+  }, [selectedPersons]);
+
   // 메인탭 변경 시 비교지표 초기화
   React.useEffect(() => {
     if (mainTab === 'temperament') {
@@ -1647,6 +1660,124 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
   const getName = (p) => p.name || p['이름'] || '이름없음';
   const getGender = (p) => p.gender || p['성별'] || '';
   const getAge = (p) => p.age || p['연령'] || '';
+
+  // ===== 개인 AI 코칭 분석 =====
+  const INDIVIDUAL_TCI_SYSTEM_PROMPT = `당신은 TCI(기질 및 성격 검사) 전문 코칭 컨설턴트입니다.
+한 사람의 TCI 점수를 바탕으로 개인 코칭 가이드를 제공합니다.
+
+## 핵심 철학 (반드시 준수)
+- 기질(NS, HA, RD, PS)은 선천적 특성이므로 우열이나 좋고 나쁨이 없습니다.
+- 기질은 바꾸는 것이 아니라 활용하는 것입니다. "이 기질을 어떻게 쓸 것인가"에 집중하세요.
+- 모든 기질 점수에는 긍정적 측면이 있습니다. 높든 낮든 그 자체로 고유한 강점입니다.
+- 성격(SD, CO, ST)은 기질과 달리 의지적 노력으로 성장 가능한 영역입니다. 성장 방향을 긍정적으로 제안하세요.
+- 부정적 평가, 문제점 나열, 결함 지적은 절대 금지합니다. 내담자의 기를 꺾지 마세요.
+
+## TCI 척도 해석 기준
+- NS(탐색성): 낮으면 안정감·신중함의 힘, 높으면 모험정신·혁신의 힘
+- HA(불확실성 센서): 낮으면 대담·낙관의 힘, 높으면 세심·준비성의 힘
+- RD(관계 민감성): 낮으면 독립성·자율의 힘, 높으면 공감력·연결의 힘
+- PS(실행 일관성): 낮으면 유연성·적응의 힘, 높으면 끈기·완수의 힘
+- SD(자율성): 자기조절과 책임감. 성장 가능한 성격 영역
+- CO(협력성): 공감과 배려. 성장 가능한 성격 영역
+- ST(자기초월): 영적 수용과 직관. 성장 가능한 성격 영역
+
+점수 범위: 0-100 (백분위). 50이 평균.
+
+## 응답 형식 (반드시 아래 4개 섹션 ## 헤더로 구분하여 작성)
+## 기질 활용 전략
+(이 사람의 기질 조합이 만들어내는 고유한 강점 패턴. 구체적 점수를 언급하며, 이 기질을 어떤 상황에서 어떻게 활용하면 좋은지 제안. 2~3가지)
+
+## 성격 성장 방향
+(SD, CO, ST 점수를 바탕으로 성장 가능한 영역과 구체적 방향 제시. 낮은 점수도 "성장 여지"로 표현. 2~3가지)
+
+## 코칭 포인트
+(코치가 이 사람과 대화할 때 활용할 수 있는 핵심 질문이나 접근 전략. 기질 특성을 고려한 맞춤형 코칭 방향. 2~3가지)
+
+## 실천 제안
+(오늘부터 시작할 수 있는 구체적이고 긍정적인 행동 2~3가지)
+
+## 주의사항
+- 반드시 구체적 점수를 언급하며 해석할 것
+- 이름을 사용할 것
+- 따뜻하고 격려하는 전문가 톤
+- 각 섹션 2~4줄 이내로 간결하게
+- "문제", "결함", "부족", "못하는" 같은 부정 표현 대신 "성장 여지", "발전 가능성", "활용" 등 사용`;
+
+  const fetchIndividualAiAnalysis = async (person) => {
+    setIndividualAiLoading(true);
+    setIndividualAiError(null);
+    try {
+      const scores = [...temperamentScales, ...characterScales]
+        .map(s => `${s}=${person[s]}`)
+        .join(', ');
+
+      const nsLevel = getTScoreLevel(person.NS);
+      const haLevel = getTScoreLevel(person.HA);
+      const rdLevel = getTScoreLevel(person.RD);
+      const sdLevel = getTScoreLevel(person.SD);
+      const coLevel = getTScoreLevel(person.CO);
+      const stLevel = getTScoreLevel(person.ST);
+      const tempTypeCode = `${nsLevel}${haLevel}${rdLevel}`;
+      const charTypeCode = `${sdLevel}${coLevel}${stLevel}`;
+
+      const prompt = `[이름] ${getName(person)}
+[성별/나이] ${getGender(person) === 'F' ? '여성' : '남성'} / ${getAge(person)}세
+[점수] ${scores}
+[기질유형] ${tempTypeCode} (${TEMPERAMENT_TYPES[tempTypeCode]?.name || '알 수 없음'})
+[성격유형] ${charTypeCode} (${CHARACTER_TYPES[charTypeCode]?.name || '알 수 없음'})
+
+이 사람의 TCI 결과를 바탕으로 개인 코칭 가이드를 작성해주세요.`;
+
+      const response = await fetch(`${AI_GATEWAY_URL}/api/ai/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'claude',
+          messages: [{ role: 'user', content: prompt }],
+          system_prompt: INDIVIDUAL_TCI_SYSTEM_PROMPT,
+          max_tokens: 2048,
+          temperature: 0.7
+        })
+      });
+      if (!response.ok) throw new Error(`API 오류 (${response.status})`);
+      const data = await response.json();
+      setIndividualAiAnalysis(data.content);
+    } catch (err) {
+      setIndividualAiError(err.message || 'AI 분석 중 오류가 발생했습니다.');
+    } finally {
+      setIndividualAiLoading(false);
+    }
+  };
+
+  const parseIndividualAiSections = (text) => {
+    if (!text) return [];
+    const sectionMap = {
+      '기질 활용 전략': { icon: '🧬', bg: 'bg-blue-50', border: 'border-blue-200', title: 'text-blue-700', body: 'text-blue-900' },
+      '성격 성장 방향': { icon: '🌱', bg: 'bg-emerald-50', border: 'border-emerald-200', title: 'text-emerald-700', body: 'text-emerald-900' },
+      '코칭 포인트': { icon: '🎯', bg: 'bg-purple-50', border: 'border-purple-200', title: 'text-purple-700', body: 'text-purple-900' },
+      '실천 제안': { icon: '✅', bg: 'bg-amber-50', border: 'border-amber-200', title: 'text-amber-700', body: 'text-amber-900' }
+    };
+    const sections = [];
+    const regex = /##\s*(.+)/g;
+    let match;
+    const matches = [];
+    while ((match = regex.exec(text)) !== null) {
+      matches.push({ key: match[1].trim(), index: match.index });
+    }
+    for (let i = 0; i < matches.length; i++) {
+      const start = matches[i].index + matches[i].key.length + 3;
+      const end = i < matches.length - 1 ? matches[i + 1].index : text.length;
+      const content = text.slice(start, end).trim();
+      const style = sectionMap[matches[i].key] || { icon: '📌', bg: 'bg-gray-50', border: 'border-gray-200', title: 'text-gray-700', body: 'text-gray-800' };
+      if (content) {
+        sections.push({ key: matches[i].key, ...style, content });
+      }
+    }
+    if (sections.length === 0) {
+      sections.push({ key: 'AI 분석', icon: '🤖', bg: 'bg-gray-50', border: 'border-gray-200', title: 'text-gray-700', body: 'text-gray-800', content: text });
+    }
+    return sections;
+  };
 
   // ★ 토글 선택 함수
   const togglePerson = (name) => {
@@ -2678,6 +2809,64 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
               </div>
             );
           })}
+        </div>
+
+        {/* AI 개인 코칭 분석 */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl p-5 mb-4">
+            <h4 className="font-bold text-white text-lg">AI 코칭 분석</h4>
+            <p className="text-indigo-200 text-xs">TCI 데이터를 기반으로 맞춤형 코칭 가이드를 제공합니다</p>
+          </div>
+
+          {individualAiAnalysis && !individualAiLoading && (
+            <button onClick={() => { setIndividualAiAnalysis(null); setIndividualAiError(null); }}
+              className="text-xs text-gray-400 hover:text-gray-600 mb-3 block">↻ 다시 분석</button>
+          )}
+
+          {!individualAiAnalysis && !individualAiLoading && !individualAiError && (
+            <div className="text-center py-6">
+              <p className="text-gray-500 text-sm mb-4">AI가 이 사람의 TCI 프로필을 분석하여<br/>맞춤형 코칭 가이드를 제공합니다.</p>
+              <button
+                onClick={() => fetchIndividualAiAnalysis(person)}
+                className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-violet-500 text-white rounded-xl hover:from-indigo-600 hover:to-violet-600 transition font-medium shadow-lg shadow-indigo-500/25">
+                AI 코칭 분석 시작
+              </button>
+            </div>
+          )}
+
+          {individualAiLoading && (
+            <div className="text-center py-8">
+              <div className="animate-spin text-4xl mb-3">🔮</div>
+              <p className="text-sm text-indigo-500 font-medium">AI가 분석 중입니다...</p>
+            </div>
+          )}
+
+          {individualAiError && (
+            <div className="bg-red-50 rounded-xl p-4 text-center">
+              <p className="text-red-600 text-sm">{individualAiError}</p>
+              <button onClick={() => fetchIndividualAiAnalysis(person)}
+                className="mt-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200">다시 시도</button>
+            </div>
+          )}
+
+          {individualAiAnalysis && !individualAiLoading && (
+            <div className="space-y-4">
+              {parseIndividualAiSections(individualAiAnalysis).map((section, idx) => (
+                <div key={idx} className={`${section.bg} border ${section.border} rounded-xl p-4`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">{section.icon}</span>
+                    <span className={`font-bold ${section.title}`}>{section.key}</span>
+                  </div>
+                  <div className={`text-sm leading-relaxed ${section.body}`}
+                    dangerouslySetInnerHTML={{ __html: section.content
+                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                      .replace(/\n- /g, '<br/>• ')
+                      .replace(/\n/g, '<br/>')
+                    }} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 코칭 가이드 */}
