@@ -616,6 +616,14 @@ export default function App() {
   const activeScaleTraits = customScaleTraits || scaleTraits;
   const activeNorms = customNorms || norms;
 
+  // 업로드 후 인라인 연결 state
+  const [linkingAfterUpload, setLinkingAfterUpload] = useState(null); // { groupId, groupName, members: [{id, name, gender, age}] }
+  const [clientUsers, setClientUsers] = useState([]); // role='client' 사용자 목록
+  const [linkAssignments, setLinkAssignments] = useState({}); // { memberId: clientUserId }
+
+  // 상담자 본인 연결 멤버 레코드
+  const [myMemberRecord, setMyMemberRecord] = useState(null); // { member, group }
+
   // ── 인증: 유저 프로필 로드 ──
   const loadUserProfile = async (userId) => {
     const { data } = await supabase.from('users').select('*').eq('id', userId).single();
@@ -630,6 +638,17 @@ export default function App() {
     setUserProfile(null);
     setGroups([]);
     setPage('list');
+  };
+
+  // ── 내담자 사용자 목록 로드 ──
+  const loadClientUsers = async () => {
+    const { data } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .eq('role', 'client')
+      .order('name');
+    setClientUsers(data || []);
+    return data || [];
   };
 
   // ── 인증: 초기화 useEffect ──
@@ -705,7 +724,26 @@ export default function App() {
         })
       );
 
-      setGroups(groupsWithMembers.filter(g => g !== null));
+      const validGroups = groupsWithMembers.filter(g => g !== null);
+      setGroups(validGroups);
+
+      // 상담자 본인의 연결된 멤버 레코드 탐색
+      let foundMember = null;
+      let foundGroup = null;
+      const currentAuthId = authUser?.id;
+      if (currentAuthId) {
+        for (const g of validGroups) {
+          for (const m of g.members) {
+            if (m.client_user_id === currentAuthId) {
+              foundMember = m;
+              foundGroup = g;
+              break;
+            }
+          }
+          if (foundMember) break;
+        }
+      }
+      setMyMemberRecord(foundMember ? { member: foundMember, group: foundGroup } : null);
     } catch (error) {
       console.error('그룹 로드 오류:', error);
     } finally {
@@ -753,9 +791,10 @@ export default function App() {
         st1: m.ST1, st2: m.ST2, st3: m.ST3
       }));
 
-      const { error: membersError } = await supabase
+      const { data: insertedMembers, error: membersError } = await supabase
         .from('members')
-        .insert(membersToInsert);
+        .insert(membersToInsert)
+        .select('id, name, gender, age');
 
       if (membersError) throw membersError;
 
@@ -772,7 +811,20 @@ export default function App() {
       setNewGroup({ name: '', desc: '' });
       setUploadedData(null);
       setNameMapping([]); // 이름 매핑 초기화
-      setPage('list');
+
+      // 4. 업로드 후 인라인 연결 단계로 이동 (내담자 계정 연결)
+      const clients = await loadClientUsers();
+      if (clients.length > 0) {
+        setLinkAssignments({});
+        setLinkingAfterUpload({
+          groupId: groupData.id,
+          groupName: groupData.name,
+          members: insertedMembers || []
+        });
+        setPage('link-after-upload');
+      } else {
+        setPage('list');
+      }
     } catch (error) {
       console.error('그룹 생성 오류:', error);
       alert('그룹 생성 중 오류가 발생했습니다: ' + error.message);
@@ -1022,6 +1074,92 @@ export default function App() {
     );
   }
 
+  // 업로드 후 인라인 연결 페이지
+  if (page === 'link-after-upload' && linkingAfterUpload) {
+    const handleLinkSave = async () => {
+      const updates = Object.entries(linkAssignments).filter(([, v]) => v);
+      await Promise.all(
+        updates.map(([memberId, clientUserId]) =>
+          supabase.from('members').update({ client_user_id: clientUserId }).eq('id', memberId)
+        )
+      );
+      setLinkingAfterUpload(null);
+      await loadGroups(userProfile);
+      setPage('list');
+    };
+
+    const handleLinkSkip = () => {
+      setLinkingAfterUpload(null);
+      loadGroups(userProfile);
+      setPage('list');
+    };
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-xl">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center">
+                <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">내담자 계정 연결</h2>
+                <p className="text-sm text-gray-500">{linkingAfterUpload.groupName}</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">
+              업로드된 검사 데이터를 내담자 계정과 연결하면 내담자가 본인 결과를 조회할 수 있습니다. (선택사항)
+            </p>
+
+            <div className="space-y-3 mb-6">
+              {linkingAfterUpload.members.map(member => (
+                <div key={member.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-800 text-sm">{member.name}</p>
+                    {(member.gender || member.age) && (
+                      <p className="text-xs text-gray-400">
+                        {member.gender && member.gender} {member.age && `${member.age}세`}
+                      </p>
+                    )}
+                  </div>
+                  <select
+                    value={linkAssignments[member.id] || ''}
+                    onChange={e => setLinkAssignments(prev => ({ ...prev, [member.id]: e.target.value || null }))}
+                    className="text-sm border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[180px]"
+                  >
+                    <option value="">— 연결 안 함 —</option>
+                    {clientUsers.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleLinkSkip}
+                className="flex-1 py-2.5 border border-slate-300 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition"
+              >
+                건너뛰기
+              </button>
+              <button
+                onClick={handleLinkSave}
+                className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-semibold transition"
+              >
+                저장하고 완료
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // 그룹 리스트 페이지
   if (page === 'list') {
     return (
@@ -1066,6 +1204,21 @@ export default function App() {
                   </svg>
                   지표 설정
                 </button>
+                {myMemberRecord && (
+                  <button
+                    onClick={() => {
+                      const virtualGroup = {
+                        ...myMemberRecord.group,
+                        name: myMemberRecord.member.name,
+                        members: [myMemberRecord.member]
+                      };
+                      setSelectedGroup(virtualGroup);
+                      setPage('analysis');
+                    }}
+                    className="px-4 py-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-xl font-medium hover:from-teal-600 hover:to-teal-700 transition-all shadow-lg shadow-teal-500/25 flex items-center gap-1.5 text-sm">
+                    <span>🪞</span> 내 결과 보기
+                  </button>
+                )}
                 <button onClick={() => { setIsIndividualMode(true); setIndividualSelectMode('upload'); setIndividualSelectedMember(null); setUploadedData(null); setNewGroup({ name: '', desc: '' }); setPage('create'); }}
                   className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-1.5 text-sm">
                   <span>👤</span> 개인진단
