@@ -103,15 +103,18 @@ DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
 DROP POLICY IF EXISTS "Users can insert own profile" ON public.users;
 DROP POLICY IF EXISTS "users_select" ON public.users;
+DROP POLICY IF EXISTS "users_select_authenticated" ON public.users;
 DROP POLICY IF EXISTS "users_insert_self" ON public.users;
 DROP POLICY IF EXISTS "users_update_self" ON public.users;
 DROP POLICY IF EXISTS "users_admin_update" ON public.users;
+DROP POLICY IF EXISTS "users_admin_update_all" ON public.users;
 
 DROP POLICY IF EXISTS "Users can view own groups" ON public.groups;
 DROP POLICY IF EXISTS "Users can create own groups" ON public.groups;
 DROP POLICY IF EXISTS "Users can update own groups" ON public.groups;
 DROP POLICY IF EXISTS "Users can delete own groups" ON public.groups;
 DROP POLICY IF EXISTS "groups_all" ON public.groups;
+DROP POLICY IF EXISTS "groups_counselor_own" ON public.groups;
 
 DROP POLICY IF EXISTS "Users can view members of own groups" ON public.members;
 DROP POLICY IF EXISTS "Users can insert members to own groups" ON public.members;
