@@ -26,29 +26,56 @@ const LEVEL_CONFIG = {
   L: { label: '낮음', color: 'bg-orange-100 text-orange-700', bar: 'bg-orange-400' }
 };
 
-export default function ClientView({ user, userProfile, onSignOut, norms, mainScaleTraits, scaleTraits }) {
+const STATUS_BADGE = {
+  pending:    { label: '입금 대기', color: 'bg-yellow-100 text-yellow-700' },
+  paid:       { label: '입금 확인', color: 'bg-blue-100 text-blue-700' },
+  link_sent:  { label: '링크 발송', color: 'bg-purple-100 text-purple-700' },
+  completed:  { label: '검사 완료', color: 'bg-green-100 text-green-700' },
+  cancelled:  { label: '취소', color: 'bg-gray-100 text-gray-500' }
+};
+
+export default function ClientView({ user, userProfile, onSignOut, norms, mainScaleTraits, scaleTraits, onNavigateToDiagnosis }) {
   const [members, setMembers] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [application, setApplication] = useState(undefined); // undefined=로딩중, null=없음
+  const [showPopup, setShowPopup] = useState(false);
 
   useEffect(() => {
-    const fetchMembers = async () => {
+    const fetchAll = async () => {
       setLoading(true);
-      const { data, error } = await supabase
+
+      // 멤버 데이터 조회
+      const { data: memberData } = await supabase
         .from('members')
         .select('*, groups(name, created_at)')
         .eq('client_user_id', user.id)
         .order('created_at', { ascending: false });
-      if (!error && data?.length > 0) {
-        setMembers(data);
-        setSelectedMember(data[0]);
-      } else {
-        setMembers([]);
+
+      const mems = memberData || [];
+      setMembers(mems);
+      if (mems.length > 0) setSelectedMember(mems[0]);
+
+      // 진단 신청 현황 조회
+      const { data: appData } = await supabase
+        .from('diagnosis_applications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setApplication(appData || null);
+
+      // 결과 없고 신청 내역도 없으면 팝업 표시
+      if (mems.length === 0 && !appData) {
+        setShowPopup(true);
       }
+
       setLoading(false);
     };
-    fetchMembers();
+    fetchAll();
   }, [user.id]);
 
   // PDF 다운로드 (indicators 모드)
@@ -129,8 +156,20 @@ export default function ClientView({ user, userProfile, onSignOut, norms, mainSc
             </div>
             <span className="font-semibold text-slate-800 text-sm">기질 및 성격검사 결과</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <span className="text-sm text-slate-500">{userProfile?.name || user.email}</span>
+            {application !== undefined && (
+              <button
+                onClick={() => onNavigateToDiagnosis?.()}
+                className={`text-xs border rounded-lg px-2.5 py-1 transition ${
+                  application
+                    ? `${STATUS_BADGE[application.status]?.color} border-current`
+                    : 'text-teal-600 border-teal-200 hover:bg-teal-50'
+                }`}
+              >
+                {application ? STATUS_BADGE[application.status]?.label : '진단 신청'}
+              </button>
+            )}
             <button
               onClick={onSignOut}
               className="text-xs text-slate-400 hover:text-slate-600 border border-slate-200 rounded-lg px-2.5 py-1 hover:bg-slate-50"
@@ -141,13 +180,95 @@ export default function ClientView({ user, userProfile, onSignOut, norms, mainSc
         </div>
       </div>
 
+      {/* 진단 신청 팝업 */}
+      {showPopup && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-7 text-center">
+            <div className="w-14 h-14 bg-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">📋</span>
+            </div>
+            <h3 className="font-bold text-slate-800 text-lg mb-2">TCI 진단을 신청하시겠습니까?</h3>
+            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+              기질 및 성격검사(TCI)를 통해 나를 더 깊이 이해하고<br />
+              코칭을 받아보세요.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPopup(false)}
+                className="flex-1 py-2.5 border border-slate-200 text-slate-500 rounded-xl text-sm font-medium hover:bg-slate-50 transition"
+              >
+                나중에
+              </button>
+              <button
+                onClick={() => { setShowPopup(false); onNavigateToDiagnosis?.(); }}
+                className="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-semibold transition"
+              >
+                신청하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-3xl mx-auto px-4 py-6">
         {/* 연결된 결과 없는 경우 */}
         {members.length === 0 ? (
-          <div className="bg-white rounded-2xl p-16 text-center shadow-sm border border-slate-100">
-            <div className="text-5xl mb-4">📋</div>
-            <h2 className="text-lg font-semibold text-slate-700 mb-2">검사 결과가 아직 연결되지 않았습니다</h2>
-            <p className="text-slate-500 text-sm">상담자에게 결과 열람 권한을 요청해 주세요.</p>
+          <div className="space-y-4">
+            {/* 신청 현황 */}
+            {application ? (
+              <div className={`rounded-2xl border p-5 ${
+                application.status === 'pending' ? 'bg-yellow-50 border-yellow-200' :
+                application.status === 'paid' ? 'bg-blue-50 border-blue-200' :
+                application.status === 'link_sent' ? 'bg-purple-50 border-purple-200' :
+                application.status === 'completed' ? 'bg-green-50 border-green-200' :
+                'bg-gray-50 border-gray-200'
+              }`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[application.status]?.color}`}>
+                    {STATUS_BADGE[application.status]?.label}
+                  </span>
+                  <span className="text-xs text-slate-400">{application.created_at?.split('T')[0]} 신청</span>
+                </div>
+                <p className="text-sm text-slate-700 mt-2">
+                  {application.status === 'pending' && '입금 후 담당자 확인까지 영업일 기준 1일 내외 소요됩니다.'}
+                  {application.status === 'paid' && '입금이 확인되었습니다. 곧 카톡/문자로 검사 링크가 발송됩니다.'}
+                  {application.status === 'link_sent' && '카톡 또는 문자로 발송된 검사 링크에서 검사를 진행해 주세요.'}
+                  {application.status === 'completed' && '검사가 완료되었습니다. 상담자가 결과를 연결하면 여기서 확인할 수 있습니다.'}
+                  {application.status === 'cancelled' && '신청이 취소되었습니다.'}
+                </p>
+                {application.admin_note && (
+                  <p className="text-sm text-slate-600 mt-1 font-medium">담당자 메모: {application.admin_note}</p>
+                )}
+              </div>
+            ) : null}
+
+            {/* 신청 안내 카드 */}
+            <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-slate-100">
+              <div className="text-5xl mb-4">📋</div>
+              {application ? (
+                <>
+                  <h2 className="text-lg font-semibold text-slate-700 mb-2">검사 결과가 아직 연결되지 않았습니다</h2>
+                  <p className="text-slate-500 text-sm mb-4">검사 완료 후 상담자가 결과를 연결하면 이 화면에서 확인할 수 있습니다.</p>
+                  <button
+                    onClick={() => onNavigateToDiagnosis?.()}
+                    className="text-sm text-teal-600 hover:text-teal-700 font-medium underline"
+                  >
+                    신청 내역 및 검사 안내 보기
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-lg font-semibold text-slate-700 mb-2">아직 진단을 신청하지 않으셨습니다</h2>
+                  <p className="text-slate-500 text-sm mb-5">TCI 기질 및 성격검사를 신청하여 나를 더 깊이 이해해 보세요.</p>
+                  <button
+                    onClick={() => onNavigateToDiagnosis?.()}
+                    className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-semibold transition"
+                  >
+                    진단 신청하기
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         ) : (
           <>

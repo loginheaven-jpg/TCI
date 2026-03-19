@@ -9,6 +9,7 @@ import CoupleAnalysisPage from './components/CoupleAnalysisPage';
 import LoginPage from './components/LoginPage';
 import ClientView from './components/ClientView';
 import UserManagementPage from './components/UserManagementPage';
+import DiagnosisApplicationPage from './components/DiagnosisApplicationPage';
 import { RELATIONSHIP_TYPES } from './data/coupleInterpretations';
 import {
   TEMPERAMENT_TYPES,
@@ -1046,6 +1047,17 @@ export default function App() {
   }
 
   if (userProfile?.role === 'client') {
+    if (page === 'diagnosis-apply') {
+      return (
+        <DiagnosisApplicationPage
+          user={authUser}
+          userProfile={userProfile}
+          application={null}
+          onApply={() => setPage('client-home')}
+          onBack={() => setPage('client-home')}
+        />
+      );
+    }
     return (
       <ClientView
         user={authUser}
@@ -1054,6 +1066,7 @@ export default function App() {
         norms={activeNorms}
         mainScaleTraits={activeMainScaleTraits}
         scaleTraits={activeScaleTraits}
+        onNavigateToDiagnosis={() => setPage('diagnosis-apply')}
       />
     );
   }

@@ -7,7 +7,16 @@ const ROLE_LABELS = {
   client: { label: '내담자', color: 'bg-slate-100 text-slate-600' }
 };
 
+const APP_STATUS_LABELS = {
+  pending:   { label: '입금 대기', color: 'bg-yellow-100 text-yellow-700' },
+  paid:      { label: '입금 확인', color: 'bg-blue-100 text-blue-700' },
+  link_sent: { label: '링크 발송', color: 'bg-purple-100 text-purple-700' },
+  completed: { label: '검사 완료', color: 'bg-green-100 text-green-700' },
+  cancelled: { label: '취소', color: 'bg-gray-100 text-gray-500' }
+};
+
 export default function UserManagementPage({ userProfile, groups }) {
+  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'applications'
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
@@ -15,6 +24,11 @@ export default function UserManagementPage({ userProfile, groups }) {
   const [linkMemberId, setLinkMemberId] = useState('');
   const [linkSaving, setLinkSaving] = useState(false);
   const [msg, setMsg] = useState('');
+
+  // 진단 신청 관리
+  const [applications, setApplications] = useState([]);
+  const [appsLoading, setAppsLoading] = useState(false);
+  const [savingAppId, setSavingAppId] = useState(null);
 
   const isAdmin = userProfile?.role === 'admin';
 
@@ -30,6 +44,51 @@ export default function UserManagementPage({ userProfile, groups }) {
   };
 
   useEffect(() => { loadUsers(); }, []);
+
+  // 진단 신청 목록 로드
+  const loadApplications = async () => {
+    setAppsLoading(true);
+    const { data, error } = await supabase
+      .from('diagnosis_applications')
+      .select('*, users(name, email, phone)')
+      .order('created_at', { ascending: false });
+    if (!error) setApplications(data || []);
+    setAppsLoading(false);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'applications') loadApplications();
+  }, [activeTab]);
+
+  // 신청 상태 변경
+  const handleAppStatusChange = async (appId, newStatus) => {
+    setSavingAppId(appId);
+    const { error } = await supabase
+      .from('diagnosis_applications')
+      .update({ status: newStatus })
+      .eq('id', appId);
+    if (!error) {
+      setApplications(prev => prev.map(a => a.id === appId ? { ...a, status: newStatus } : a));
+      setMsg('상태가 변경되었습니다.');
+      setTimeout(() => setMsg(''), 3000);
+    } else {
+      setMsg('상태 변경 실패: ' + error.message);
+    }
+    setSavingAppId(null);
+  };
+
+  // 신청 메모 변경
+  const handleAppNoteChange = async (appId, note) => {
+    setSavingAppId(appId);
+    const { error } = await supabase
+      .from('diagnosis_applications')
+      .update({ admin_note: note })
+      .eq('id', appId);
+    if (!error) {
+      setApplications(prev => prev.map(a => a.id === appId ? { ...a, admin_note: note } : a));
+    }
+    setSavingAppId(null);
+  };
 
   // 역할 변경 (어드민 전용)
   const handleRoleChange = async (userId, newRole) => {
@@ -104,9 +163,35 @@ export default function UserManagementPage({ userProfile, groups }) {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <h2 className="text-xl font-bold text-slate-800 mb-1">사용자 관리</h2>
-      <p className="text-sm text-slate-500 mb-6">
-        {isAdmin ? '전체 사용자 목록 및 역할 관리' : '상담자 페이지'}
-      </p>
+
+      {/* 탭 */}
+      <div className="flex gap-1 mb-6 border-b border-slate-200">
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ${
+            activeTab === 'users'
+              ? 'border-teal-600 text-teal-700'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          회원 목록
+        </button>
+        <button
+          onClick={() => setActiveTab('applications')}
+          className={`px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px ${
+            activeTab === 'applications'
+              ? 'border-teal-600 text-teal-700'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          진단 신청 관리
+          {applications.filter(a => a.status === 'pending').length > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 bg-red-500 text-white text-[10px] rounded-full">
+              {applications.filter(a => a.status === 'pending').length}
+            </span>
+          )}
+        </button>
+      </div>
 
       {msg && (
         <div className="mb-4 p-3 bg-teal-50 border border-teal-200 rounded-lg text-teal-700 text-sm">
@@ -114,7 +199,81 @@ export default function UserManagementPage({ userProfile, groups }) {
         </div>
       )}
 
-      {/* ── 사용자 목록 ── */}
+      {/* ── 진단 신청 관리 탭 ── */}
+      {activeTab === 'applications' && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-8">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <h3 className="font-semibold text-slate-700">진단 신청 목록</h3>
+            <p className="text-xs text-slate-400 mt-0.5">신청 상태를 변경하고 메모를 남길 수 있습니다.</p>
+          </div>
+          {appsLoading ? (
+            <div className="py-12 text-center text-slate-400 text-sm">로딩 중...</div>
+          ) : applications.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-sm">신청 내역이 없습니다.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+                    <th className="px-4 py-3 text-left">신청자</th>
+                    <th className="px-4 py-3 text-left">전화</th>
+                    <th className="px-4 py-3 text-left">신청일</th>
+                    <th className="px-4 py-3 text-left">상태</th>
+                    <th className="px-4 py-3 text-left">메모</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {applications.map(app => (
+                    <tr key={app.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-slate-800">{app.users?.name || app.name || '—'}</p>
+                        <p className="text-xs text-slate-400">{app.users?.email || '—'}</p>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 text-xs">
+                        {app.users?.phone || app.phone || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-slate-500 text-xs">
+                        {app.created_at?.split('T')[0]}
+                      </td>
+                      <td className="px-4 py-3">
+                        <select
+                          value={app.status}
+                          disabled={savingAppId === app.id}
+                          onChange={e => handleAppStatusChange(app.id, e.target.value)}
+                          className={`text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:opacity-50 ${APP_STATUS_LABELS[app.status]?.color}`}
+                        >
+                          <option value="pending">입금 대기</option>
+                          <option value="paid">입금 확인</option>
+                          <option value="link_sent">링크 발송</option>
+                          <option value="completed">검사 완료</option>
+                          <option value="cancelled">취소</option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="text"
+                          defaultValue={app.admin_note || ''}
+                          onBlur={e => {
+                            if (e.target.value !== (app.admin_note || '')) {
+                              handleAppNoteChange(app.id, e.target.value);
+                            }
+                          }}
+                          placeholder="메모 입력 후 Tab/클릭 아웃"
+                          className="text-xs border border-slate-200 rounded px-2 py-1 w-40 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 사용자 목록 탭 ── */}
+      {activeTab === 'users' && (
+      <>{/* ── 사용자 목록 ── */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-8">
         <div className="px-5 py-4 border-b border-slate-100">
           <h3 className="font-semibold text-slate-700">가입 회원 목록</h3>
@@ -244,6 +403,8 @@ export default function UserManagementPage({ userProfile, groups }) {
           </div>
         </div>
       )}
+
+      </>)}
 
       {/* ── 검사 연결 모달 ── */}
       {linkModal && (
