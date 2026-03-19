@@ -1,6 +1,6 @@
 # TCI 그룹분석 시스템 아키텍처
 
-> **최종 업데이트**: 2026-03-17
+> **최종 업데이트**: 2026-03-19
 > **버전**: 2.0.0
 > **배포**: Vercel (정적 SPA)
 > **저장소**: https://github.com/loginheaven-jpg/TCI
@@ -51,9 +51,12 @@ TCI/
 ├── src/
 │   ├── main.jsx                    # 엔트리포인트
 │   ├── index.css                   # Tailwind 기본 스타일
-│   ├── App.jsx                     # 메인 앱 (라우팅, 상태관리, CRUD) ─ 2,871줄
+│   ├── App.jsx                     # 메인 앱 (라우팅, 인증, 상태관리, CRUD) ─ 3,100줄+
 │   ├── supabaseClient.js           # Supabase 클라이언트 초기화
 │   ├── components/
+│   │   ├── LoginPage.jsx           # 로그인/회원가입 UI ─ V2 신규
+│   │   ├── ClientView.jsx          # 내담자 결과 조회 화면 ─ V2 신규
+│   │   ├── UserManagementPage.jsx  # 사용자/역할/연결 관리 ─ V2 신규
 │   │   ├── CoupleAnalysisPage.jsx  # 커플분석 4탭 UI + AI 분석 ─ 795줄
 │   │   ├── CouplePDFReport.jsx     # 커플 PDF 6페이지 레이아웃 ─ 542줄
 │   │   ├── PDFReport.jsx           # 개인/그룹 PDF 3페이지 레이아웃 ─ 747줄
@@ -63,6 +66,7 @@ TCI/
 │       └── coupleInterpretations.js # 커플 역동/소통 해석 ─ 547줄
 ├── src_backup/                     # 이전 버전 백업 (사용 안 함)
 ├── dist/                           # 빌드 결과물 (Vercel 배포)
+├── supabase_migration_v2.sql       # V2 멀티유저 DB 마이그레이션 ─ V2 신규
 ├── package.json
 ├── vite.config.js                  # 포트 5173, sourcemap 활성
 ├── tailwind.config.js
@@ -75,6 +79,15 @@ TCI/
 
 `App.jsx`의 `page` state 기반 조건부 렌더링 (React Router 미사용).
 
+**인증 우선 렌더링** (page보다 먼저 판단):
+```
+authLoading === true       → 로딩 스피너
+!authUser                  → <LoginPage />
+userProfile.role === 'client' → <ClientView />
+page === 'users'           → <UserManagementPage /> (어드민/상담자)
+```
+
+**상담자/어드민 page 라우팅:**
 ```
 page 값           → 렌더링 컴포넌트          설명
 ─────────────────────────────────────────────────────
@@ -85,6 +98,7 @@ page 값           → 렌더링 컴포넌트          설명
 'couple-create'   → App 내부 (커플 설정)      커플분석 데이터 입력 (CSV/기존선택)
 'couple-analysis' → <CoupleAnalysisPage />    커플분석 4탭 결과
 'settings'        → <SettingsPage />          해석 지표 커스터마이징
+'users'           → <UserManagementPage />    사용자 관리 (역할 변경, 내담자-멤버 연결)
 ```
 
 ---
@@ -93,10 +107,13 @@ page 값           → 렌더링 컴포넌트          설명
 
 React Router 없이 `useState`로 전체 상태를 관리.
 
-### 5.1 핵심 State 변수 (24개)
+### 5.1 핵심 State 변수 (27개)
 
 | 카테고리 | 변수명 | 타입 | 설명 |
 |---------|--------|------|------|
+| **인증** | `authUser` | object\|null | Supabase Auth 유저 객체 |
+| | `userProfile` | object\|null | users 테이블 프로필 (role 포함) |
+| | `authLoading` | boolean | 인증 초기화 완료 여부 |
 | **페이지** | `page` | string | 현재 활성 페이지 |
 | **데이터** | `groups` | array | DB에서 로드한 전체 그룹+멤버 |
 | | `selectedGroup` | object | 분석 대상 그룹 |
@@ -126,7 +143,9 @@ React Router 없이 `useState`로 전체 상태를 관리.
 
 | 함수명 | 위치 | 역할 |
 |--------|------|------|
-| `loadGroups()` | ~610 | Supabase에서 groups+members 로드 → state 세팅 |
+| `loadUserProfile(userId)` | ~620 | users 테이블에서 프로필 로드 (role 포함) |
+| `handleSignOut()` | ~628 | 로그아웃 → state 초기화 |
+| `loadGroups(profile)` | ~650 | Supabase에서 groups+members 로드 (role별 필터) → state 세팅 |
 | `handleCreateGroup()` | ~678 | 그룹 + 멤버 Supabase 저장 |
 | `handleFileUpload(e)` | ~738 | CSV 파싱 (EUC-KR/UTF-8 자동감지), 이름 익명화 |
 | `handleCoupleFileUpload(e, target)` | ~846 | 커플용 CSV 파싱 (A/B 구분) |
@@ -137,11 +156,26 @@ React Router 없이 `useState`로 전체 상태를 관리.
 
 ## 6. 데이터베이스 스키마 (Supabase)
 
+### 6.0 users 테이블 (멀티유저 V2 추가)
+
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| `id` | UUID (PK, FK → auth.users.id) | Supabase Auth UID |
+| `email` | text | 구글 계정 이메일 |
+| `name` | text | 실명 |
+| `role` | text | 'admin' / 'counselor' / 'client' (기본: 'client') |
+| `gender` | text | 성별 (남/여) |
+| `birth_year` | integer | 생년 |
+| `phone` | text | 전화번호 |
+| `join_path` | text | 가입경로 (예: "진단기반 코칭세미나 2026 1기") |
+| `created_at` | timestamptz | 가입일시 |
+
 ### 6.1 groups 테이블
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
 | `id` | UUID (PK) | 자동 생성 |
+| `user_id` | UUID (FK → auth.users.id) | 그룹 생성 상담자 (nullable: 기존 데이터 호환) |
 | `name` | text | 그룹명 또는 개인명 |
 | `description` | text | 설명 (선택) |
 | `created_at` | timestamptz | 생성일시 |
@@ -172,6 +206,7 @@ React Router 없이 `useState`로 전체 상태를 관리.
 | `sd1`~`sd5` | integer | SD 하위 5개 |
 | `co1`~`co5` | integer | CO 하위 5개 |
 | `st1`~`st3` | integer | ST 하위 3개 |
+| `client_user_id` | UUID (FK → auth.users.id, nullable) | 연결된 내담자 계정 |
 
 ---
 
@@ -467,10 +502,65 @@ B 색상: #F97316 (주황) + drop-shadow 글로우
 
 ---
 
-## 15. 향후 개선 고려사항
+## 15. 멀티유저 시스템 (V2, 2026-03-19 추가)
 
-- [ ] App.jsx 분리 (현재 2,871줄 → 페이지별 컴포넌트 분리)
+### 15.1 사용자 역할
+
+| 역할 | 가입 방법 | 접근 권한 |
+|------|----------|----------|
+| **admin** | 어드민이 Supabase SQL로 직접 설정 | 전체 데이터 + 사용자 관리 |
+| **counselor** | 셀프 가입 후 어드민이 역할 변경 | 본인 그룹 CRUD + 전체 분석 기능 |
+| **client** | 셀프 가입 (기본값) | 본인 연결 검사 데이터 조회만 |
+
+### 15.2 인증 플로우
+
+```
+App.jsx 마운트
+  → supabase.auth.getSession()
+  → authUser 있음: loadUserProfile() → userProfile.role 확인
+      → 'client'    → <ClientView />
+      → 'counselor' → 기존 앱 (본인 그룹만 필터)
+      → 'admin'     → 기존 앱 (전체 그룹) + 사용자 관리
+  → authUser 없음: <LoginPage />
+```
+
+### 15.3 신규 컴포넌트
+
+| 컴포넌트 | 파일 | 역할 |
+|---------|------|------|
+| `LoginPage` | `components/LoginPage.jsx` | 이메일/비밀번호 로그인 + 회원가입 (성별/생년/전화/가입경로 수집) |
+| `ClientView` | `components/ClientView.jsx` | 내담자 전용 — 본인 TCI 결과 조회 (indicators 수준, 상세 해석 제외) |
+| `UserManagementPage` | `components/UserManagementPage.jsx` | 사용자 목록 + 역할 변경 + 내담자-멤버 연결 관리 |
+
+### 15.4 RLS (Row Level Security)
+
+- `users`: 인증 사용자 전체 SELECT / 본인 UPDATE / 어드민 전체 UPDATE
+- `groups`: 상담자는 `user_id = auth.uid()` / 어드민은 전체
+- `members`: 상담자는 소속 그룹 CRUD / 어드민 전체 / 내담자는 `client_user_id = auth.uid()` SELECT만
+
+### 15.5 내담자 화면 (ClientView) 제공 항목
+
+| 항목 | 제공 여부 |
+|------|----------|
+| 7개 상위척도 점수 + 레벨 (H/M/L) + 척도 설명 | ✅ |
+| 하위척도 테이블 (23개) | ✅ |
+| 성격 성장 포인트 경고 | ✅ |
+| PDF 저장 (indicators 모드) | ✅ |
+| 기질유형명 / 성격유형명 | ❌ (내담자 오해 방지) |
+| 기질 상호작용 분석 | ❌ |
+| AI 코칭 분석 | ❌ |
+| 그룹 비교 | ❌ |
+
+### 15.6 DB 마이그레이션
+
+`supabase_migration_v2.sql` — Supabase Dashboard > SQL Editor에서 수동 실행.
+
+---
+
+## 16. 향후 개선 고려사항
+
+- [ ] App.jsx 분리 (현재 3,000줄+ → 페이지별 컴포넌트 분리)
 - [ ] React Router 도입 (URL 기반 라우팅)
 - [ ] 코드 스플리팅 (현재 번들 2.5MB)
-- [ ] 인증/권한 시스템 (현재 공개 접근)
-- [ ] 개인진단 AI 분석 확장 (현재 커플분석에만 적용)
+- [x] 인증/권한 시스템 (V2 완료)
+- [x] 개인진단 AI 분석 확장 (V2 완료)

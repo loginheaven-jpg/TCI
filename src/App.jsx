@@ -6,6 +6,9 @@ import { pdf } from '@react-pdf/renderer';
 import PDFReport from './components/PDFReport';
 import SettingsPage from './components/SettingsPage';
 import CoupleAnalysisPage from './components/CoupleAnalysisPage';
+import LoginPage from './components/LoginPage';
+import ClientView from './components/ClientView';
+import UserManagementPage from './components/UserManagementPage';
 import { RELATIONSHIP_TYPES } from './data/coupleInterpretations';
 import {
   TEMPERAMENT_TYPES,
@@ -577,6 +580,11 @@ const sampleData = [
 // 메인 앱 컴포넌트
 // ========================================
 export default function App() {
+  // ── 인증 State ──
+  const [authUser, setAuthUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   const [page, setPage] = useState('list');
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -608,16 +616,49 @@ export default function App() {
   const activeScaleTraits = customScaleTraits || scaleTraits;
   const activeNorms = customNorms || norms;
 
+  // ── 인증: 유저 프로필 로드 ──
+  const loadUserProfile = async (userId) => {
+    const { data } = await supabase.from('users').select('*').eq('id', userId).single();
+    setUserProfile(data);
+    setAuthLoading(false);
+  };
+
+  // ── 인증: 로그아웃 ──
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setAuthUser(null);
+    setUserProfile(null);
+    setGroups([]);
+    setPage('list');
+  };
+
+  // ── 인증: 초기화 useEffect ──
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthUser(session?.user ?? null);
+      if (session?.user) loadUserProfile(session.user.id);
+      else setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthUser(session?.user ?? null);
+      if (session?.user) loadUserProfile(session.user.id);
+      else { setUserProfile(null); setAuthLoading(false); }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   // Supabase에서 그룹 데이터 로드
-  const loadGroups = async () => {
+  const loadGroups = async (profile) => {
+    const activeProfile = profile || userProfile;
     try {
       setLoading(true);
 
-      // 그룹 목록 가져오기
-      const { data: groupsData, error: groupsError } = await supabase
-        .from('groups')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // 그룹 목록 가져오기 (counselor: 본인 그룹, admin: 전체)
+      let query = supabase.from('groups').select('*').order('created_at', { ascending: false });
+      if (activeProfile?.role === 'counselor') {
+        query = query.eq('user_id', authUser?.id || '');
+      }
+      const { data: groupsData, error: groupsError } = await query;
 
       if (groupsError) throw groupsError;
 
@@ -637,6 +678,8 @@ export default function App() {
           // DB 컬럼명을 앱에서 사용하는 형식으로 변환
           const members = (membersData || []).map((m, idx) => ({
             id: idx + 1,
+            dbId: m.id, // DB UUID (UserManagementPage 연결에 사용)
+            client_user_id: m.client_user_id, // 연결된 내담자 계정
             name: m.name,
             originalName: m.original_name || m.name, // 원본 이름 (없으면 name 사용)
             gender: m.gender,
@@ -670,10 +713,10 @@ export default function App() {
     }
   };
 
-  // 컴포넌트 마운트 시 데이터 로드
+  // 인증 완료 후 데이터 로드
   useEffect(() => {
-    loadGroups();
-  }, []);
+    if (userProfile) loadGroups(userProfile);
+  }, [userProfile]);
 
   const handleCreateGroup = async () => {
     if (!newGroup.name || !uploadedData) return;
@@ -684,7 +727,8 @@ export default function App() {
         .from('groups')
         .insert({
           name: newGroup.name,
-          description: newGroup.desc
+          description: newGroup.desc,
+          user_id: authUser?.id || null
         })
         .select()
         .single();
@@ -931,37 +975,110 @@ export default function App() {
     }
   };
 
+  // ── 인증 기반 렌더링 ──
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-teal-600 rounded-2xl mb-4 shadow-lg">
+            <span className="text-white text-2xl font-bold">TCI</span>
+          </div>
+          <p className="text-slate-500 text-sm mt-2">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authUser) {
+    return <LoginPage />;
+  }
+
+  if (userProfile?.role === 'client') {
+    return (
+      <ClientView
+        user={authUser}
+        userProfile={userProfile}
+        onSignOut={handleSignOut}
+        norms={activeNorms}
+        mainScaleTraits={activeMainScaleTraits}
+        scaleTraits={activeScaleTraits}
+      />
+    );
+  }
+
+  // 사용자 관리 페이지 (어드민/상담자)
+  if (page === 'users') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-4 mb-6">
+            <button onClick={() => setPage('list')} className="text-slate-500 hover:text-slate-700 font-medium flex items-center gap-1 text-sm">
+              ← 목록
+            </button>
+          </div>
+          <UserManagementPage userProfile={userProfile} groups={groups} />
+        </div>
+      </div>
+    );
+  }
+
   // 그룹 리스트 페이지
   if (page === 'list') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
+          {/* 헤더: 타이틀 + 유저 정보 + 버튼 */}
+          <div className="flex items-start justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-gray-800">TCI 그룹 분석</h1>
               <p className="text-gray-500 mt-1">기질 및 성격검사 그룹 분석 서비스</p>
             </div>
-            <div className="flex gap-3">
-              <button onClick={() => setPage('settings')}
-                className="px-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition-all flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                지표 설정
-              </button>
-              <button onClick={() => { setIsIndividualMode(true); setIndividualSelectMode('upload'); setIndividualSelectedMember(null); setUploadedData(null); setNewGroup({ name: '', desc: '' }); setPage('create'); }}
-                className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2">
-                <span className="text-xl">👤</span> 개인진단
-              </button>
-              <button onClick={() => { setCouplePersonA(null); setCouplePersonB(null); setCoupleRelType('COUPLE'); setCoupleSelectMode('upload'); setPage('couple-create'); }}
-                className="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-xl font-medium hover:from-rose-600 hover:to-rose-700 transition-all shadow-lg shadow-rose-500/25 flex items-center gap-2">
-                <span className="text-xl">💑</span> 커플분석
-              </button>
-              <button onClick={() => { setIsIndividualMode(false); setPage('create'); }}
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg shadow-blue-500/25 flex items-center gap-2">
-                <span className="text-xl">+</span> 새 그룹 만들기
-              </button>
+            <div className="flex flex-col items-end gap-3">
+              {/* 유저 정보 + 로그아웃 */}
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  userProfile?.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-teal-100 text-teal-700'
+                }`}>
+                  {userProfile?.role === 'admin' ? '어드민' : '상담자'}
+                </span>
+                <span className="text-sm text-gray-600">{userProfile?.name || authUser?.email}</span>
+                <button onClick={handleSignOut}
+                  className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-lg px-2 py-1 hover:bg-gray-50">
+                  로그아웃
+                </button>
+              </div>
+              {/* 액션 버튼 */}
+              <div className="flex gap-2">
+                {(userProfile?.role === 'admin' || userProfile?.role === 'counselor') && (
+                  <button onClick={() => setPage('users')}
+                    className="px-4 py-2 bg-purple-50 text-purple-700 rounded-xl font-medium hover:bg-purple-100 transition-all flex items-center gap-1.5 text-sm border border-purple-200">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    사용자 관리
+                  </button>
+                )}
+                <button onClick={() => setPage('settings')}
+                  className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl font-medium hover:bg-gray-200 transition-all flex items-center gap-2 text-sm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  지표 설정
+                </button>
+                <button onClick={() => { setIsIndividualMode(true); setIndividualSelectMode('upload'); setIndividualSelectedMember(null); setUploadedData(null); setNewGroup({ name: '', desc: '' }); setPage('create'); }}
+                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-1.5 text-sm">
+                  <span>👤</span> 개인진단
+                </button>
+                <button onClick={() => { setCouplePersonA(null); setCouplePersonB(null); setCoupleRelType('COUPLE'); setCoupleSelectMode('upload'); setPage('couple-create'); }}
+                  className="px-4 py-2 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-xl font-medium hover:from-rose-600 hover:to-rose-700 transition-all shadow-lg shadow-rose-500/25 flex items-center gap-1.5 text-sm">
+                  <span>💑</span> 커플분석
+                </button>
+                <button onClick={() => { setIsIndividualMode(false); setPage('create'); }}
+                  className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg shadow-blue-500/25 flex items-center gap-1.5 text-sm">
+                  <span>+</span> 새 그룹 만들기
+                </button>
+              </div>
             </div>
           </div>
 
