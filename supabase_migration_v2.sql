@@ -34,6 +34,14 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS join_path TEXT;
 ALTER TABLE public.users DROP COLUMN IF EXISTS organization;
 
 -- ============================================================
+-- 1-2. groups 테이블에 user_id 컬럼 추가 (없을 경우)
+-- ============================================================
+ALTER TABLE public.groups ADD COLUMN IF NOT EXISTS user_id UUID
+  REFERENCES auth.users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_groups_user_id ON public.groups(user_id);
+
+-- ============================================================
 -- 2. members 테이블에 client_user_id 추가
 -- ============================================================
 ALTER TABLE public.members
