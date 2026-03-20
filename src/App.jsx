@@ -1887,6 +1887,12 @@ export default function App() {
         mainScaleTraits={activeMainScaleTraits}
         scaleTraits={activeScaleTraits}
         norms={activeNorms}
+        onCoupleAnalysis={(personA, personB) => {
+          setCouplePersonA(personA);
+          setCouplePersonB(personB);
+          setCoupleRelType('COUPLE');
+          setPage('couple-analysis');
+        }}
       />
     );
   }
@@ -1897,7 +1903,7 @@ export default function App() {
 // ========================================
 // 분석 페이지 컴포넌트
 // ========================================
-function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
+function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCoupleAnalysis }) {
   // ★ 복수 선택을 위해 Set으로 변경
   const [selectedPersons, setSelectedPersons] = useState(new Set());
   const [mainTab, setMainTab] = useState('temperament');
@@ -3278,6 +3284,14 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms }) {
               );
             })}
           </div>
+          {/* 2인 그룹일 때 커플 분석 버튼 */}
+          {rawData.length === 2 && onCoupleAnalysis && (
+            <button
+              onClick={() => onCoupleAnalysis(rawData[0], rawData[1])}
+              className="mt-3 w-full px-3 py-2.5 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-xl text-sm font-medium hover:from-rose-600 hover:to-rose-700 transition shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2">
+              <span>💑</span> 커플 분석
+            </button>
+          )}
         </div>
 
         {/* 메인 콘텐츠 */}
