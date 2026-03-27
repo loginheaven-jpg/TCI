@@ -1912,6 +1912,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
   const [compareScales, setCompareScales] = useState(['NS', 'HA']); // 산점도 비교 지표 (2개 선택)
   const [expandedSubScales, setExpandedSubScales] = useState(new Set()); // 하위지표 특성 펼침 상태
   const [allSubScalesExpanded, setAllSubScalesExpanded] = useState(false); // 전체 펼치기
+  const [showSubScales, setShowSubScales] = useState(false); // 하위지표 영역 토글
 
   // 개인 AI 코칭 분석
   const [individualAiAnalysis, setIndividualAiAnalysis] = useState(null);
@@ -1934,6 +1935,14 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
       setCompareScales(['SD', 'CO']);
     }
   }, [mainTab]);
+
+  // 탭 변경 시 하위지표 접기
+  React.useEffect(() => {
+    setShowSubScales(false);
+    setExpandedSubScales(new Set());
+    setAllSubScalesExpanded(false);
+  }, [subTab]);
+
   const reportRef = useRef(null);
 
   // 레벨 판정 함수 (renderScaleDetail + renderIndividualReport 공용)
@@ -2442,284 +2451,357 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
   // 개별 지표 상세
   const renderScaleDetail = (scale) => {
     const subCodes = subScaleGroups[scale];
-    const mainData = rawData.map(p => ({ name: getName(p), value: p[scale] }));
+    const isTemperament = ['NS', 'HA', 'RD', 'PS'].includes(scale);
+    const traits = mainScaleTraits[scale];
+
+    // 선택된 참가자들의 평균 백분위로 하이라이트 방향 결정
+    const selectedList = rawData.filter(p => isSelected(getName(p)));
+    let mainHighlightSide = 'none';
+    if (selectedList.length > 0) {
+      const avgPct = selectedList.reduce((sum, p) => sum + (p[scale] || 50), 0) / selectedList.length;
+      mainHighlightSide = avgPct <= 40 ? 'low' : avgPct >= 61 ? 'high' : 'none';
+    }
 
     return (
-      <div className="flex gap-4 h-full">
-        {/* 좌측: 상위지표 세로 막대 */}
-        <div className="w-[35%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-          {/* 헤더 + 강점/약점 카드 (차트 위로 이동) */}
-          <div className="flex-shrink-0">
-            {/* 헤더: 기질=파랑, 성격=녹색 */}
-            <div className={`px-4 py-3 ${
-              ['NS', 'HA', 'RD', 'PS'].includes(scale)
-                ? 'bg-gradient-to-r from-blue-700 to-blue-800'
-                : 'bg-gradient-to-r from-emerald-700 to-emerald-800'
-            }`}>
-              <h3 className="text-lg font-bold text-white">{scaleLabels[scale]}</h3>
-              <p className={`text-xs ${['NS', 'HA', 'RD', 'PS'].includes(scale) ? 'text-blue-200' : 'text-emerald-200'}`}>{engLabels[scale]}</p>
-              {mainScaleTraits[scale]?.description && (
-                <p className="text-xs text-white/80 mt-1 leading-relaxed">{mainScaleTraits[scale].description}</p>
+      <div className="h-full flex flex-col gap-4 overflow-y-auto pr-1">
+        {/* Section A: 헤더 + 스펙트럼 차트 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* 헤더 */}
+          <div className={`px-5 py-4 ${
+            isTemperament
+              ? 'bg-gradient-to-r from-blue-700 to-blue-800'
+              : 'bg-gradient-to-r from-emerald-700 to-emerald-800'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-white">{scaleLabels[scale]}</h3>
+                <p className={`text-xs ${isTemperament ? 'text-blue-200' : 'text-emerald-200'}`}>{engLabels[scale]}</p>
+              </div>
+              {traits && (
+                <div className="flex items-center gap-4 text-white/90 text-xs">
+                  <span className="bg-white/20 px-3 py-1 rounded-full">{traits.lowPersona || '낮음'}</span>
+                  <span className="text-white/50">◄ ─── ►</span>
+                  <span className="bg-white/20 px-3 py-1 rounded-full">{traits.highPersona || '높음'}</span>
+                </div>
               )}
             </div>
-            {/* 강점/약점 카드 - 확대된 레이아웃 */}
-            {mainScaleTraits[scale] && (
-              <div className="grid grid-cols-2 gap-0 border-b border-gray-200">
-                {/* 낮을 때 (왼쪽) */}
-                <div className="bg-gradient-to-b from-orange-50 to-orange-100/50 p-4 border-r border-gray-200">
-                  {mainScaleTraits[scale].lowPersona && (
-                    <div className="mb-3 pb-2 border-b border-orange-200">
-                      <div className="font-bold text-orange-800 text-sm">{mainScaleTraits[scale].lowPersona}</div>
-                      <div className="text-xs text-orange-600 mt-0.5 leading-relaxed">{mainScaleTraits[scale].lowPersonaDesc}</div>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg">📉</span>
-                    <span className="font-bold text-orange-700 text-sm">낮을 때</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-500 font-bold text-xs mt-0.5">✓</span>
-                      <span className="text-xs text-gray-700 leading-relaxed font-medium">{mainScaleTraits[scale].lowAdv.join(', ')}</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-red-400 font-bold text-xs mt-0.5">✗</span>
-                      <span className="text-xs text-gray-500 leading-relaxed">{mainScaleTraits[scale].lowDis.join(', ')}</span>
-                    </div>
-                  </div>
-                </div>
-                {/* 높을 때 (오른쪽) */}
-                <div className="bg-gradient-to-b from-blue-50 to-blue-100/50 p-4">
-                  {mainScaleTraits[scale].highPersona && (
-                    <div className="mb-3 pb-2 border-b border-blue-200">
-                      <div className="font-bold text-blue-800 text-sm">{mainScaleTraits[scale].highPersona}</div>
-                      <div className="text-xs text-blue-600 mt-0.5 leading-relaxed">{mainScaleTraits[scale].highPersonaDesc}</div>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-lg">📈</span>
-                    <span className="font-bold text-blue-700 text-sm">높을 때</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-500 font-bold text-xs mt-0.5">✓</span>
-                      <span className="text-xs text-gray-700 leading-relaxed font-medium">{mainScaleTraits[scale].highAdv.join(', ')}</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-red-400 font-bold text-xs mt-0.5">✗</span>
-                      <span className="text-xs text-gray-500 leading-relaxed">{mainScaleTraits[scale].highDis.join(', ')}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {traits?.description && (
+              <p className="text-xs text-white/80 mt-2 leading-relaxed">{traits.description}</p>
             )}
           </div>
-          {/* 차트 영역 */}
-          <div className="flex-1 min-h-0 p-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mainData} margin={{ top: 10, right: 5, left: 5, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 14, fontWeight: 500 }} angle={-45} textAnchor="end" interval={0} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(v) => [`${v}%`, '백분위']} contentStyle={{ borderRadius: 8, fontSize: 15 }} />
-                <ReferenceLine y={30} stroke="#F97316" strokeDasharray="4 4" strokeWidth={2} label={{ value: '30%', position: 'right', fontSize: 13, fill: '#F97316' }} />
-                <ReferenceLine y={70} stroke="#3B82F6" strokeDasharray="4 4" strokeWidth={2} label={{ value: '70%', position: 'right', fontSize: 13, fill: '#3B82F6' }} />
-                <Bar dataKey="value" fill={mainColor} shape={<Custom3DBar />}>
-                  {mainData.map((entry, i) => (
-                    <Cell key={i}
-                      fill={isSelected(entry.name) ? memberColors[i % memberColors.length] : '#D1D5DB'}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+
+          {/* 스펙트럼 차트 */}
+          <div className="p-5">
+            {/* 스펙트럼 라벨 */}
+            <div className="flex justify-between items-center mb-1 px-24">
+              <span className="text-xs font-bold text-orange-600">← {traits?.lowPersona || '낮음'}</span>
+              <span className="text-xs text-gray-400">50%</span>
+              <span className="text-xs font-bold text-blue-600">{traits?.highPersona || '높음'} →</span>
+            </div>
+
+            {/* 참가자별 스펙트럼 행 */}
+            <div className={`space-y-${rawData.length <= 3 ? '3' : '2'}`}>
+              {rawData.map((p, idx) => {
+                const pct = p[scale] || 50;
+                const selected = isSelected(getName(p));
+                const level = getLevel(pct);
+                const color = memberColors[idx % memberColors.length];
+
+                return (
+                  <div key={getName(p)} className={`flex items-center gap-3 transition-opacity ${selected ? 'opacity-100' : 'opacity-30'}`}>
+                    <span className="w-20 text-sm font-medium truncate text-right text-gray-700">{getName(p)}</span>
+                    <div className="flex-1 h-9 rounded-full relative overflow-hidden" style={{
+                      background: 'linear-gradient(to right, #FFF7ED 0%, #FED7AA 25%, #F3F4F6 40%, #F3F4F6 60%, #BFDBFE 75%, #EFF6FF 100%)'
+                    }}>
+                      {/* 30% 기준선 */}
+                      <div className="absolute top-0 bottom-0 w-px bg-orange-300/60 z-10" style={{ left: '30%' }} />
+                      {/* 50% 중앙선 */}
+                      <div className="absolute top-0 bottom-0 w-px bg-gray-400/50 z-10" style={{ left: '50%' }} />
+                      {/* 70% 기준선 */}
+                      <div className="absolute top-0 bottom-0 w-px bg-blue-300/60 z-10" style={{ left: '70%' }} />
+                      {/* 마커 dot */}
+                      <div
+                        className="absolute top-1/2 -translate-y-1/2 w-7 h-7 rounded-full border-[3px] border-white shadow-lg transition-all duration-500 z-20 flex items-center justify-center"
+                        style={{
+                          left: `calc(${Math.max(2, Math.min(98, pct))}% - 14px)`,
+                          backgroundColor: color,
+                        }}
+                      >
+                        <span className="text-[9px] font-bold text-white drop-shadow">{pct}</span>
+                      </div>
+                      {/* 원점~마커까지 트레일 바 */}
+                      <div
+                        className="absolute top-1/2 -translate-y-1/2 h-2 rounded-full transition-all duration-500"
+                        style={{
+                          left: pct >= 50 ? '50%' : `${pct}%`,
+                          width: `${Math.abs(pct - 50)}%`,
+                          backgroundColor: color,
+                          opacity: 0.35,
+                        }}
+                      />
+                    </div>
+                    <span className={`w-10 text-sm text-right font-bold ${pct >= 70 ? 'text-blue-600' : pct <= 30 ? 'text-orange-500' : 'text-gray-600'}`}>
+                      {pct}%
+                    </span>
+                    <span className={`w-8 text-center text-xs font-bold text-white rounded-md px-1.5 py-1 ${getLevelColor(level)}`}>
+                      {level}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* 구간 범례 */}
+            <div className="flex justify-center gap-6 mt-3 text-[10px] text-gray-400">
+              <span>0─30%: 낮음</span>
+              <span>31─69%: 중간</span>
+              <span>70─100%: 높음</span>
+            </div>
           </div>
         </div>
 
-        {/* 우측: 하위지표 가로 막대 */}
-        <div className="w-[65%] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-5 py-3 border-b flex-shrink-0 flex items-center justify-between">
-            <h3 className="font-bold text-gray-800">{scale} 하위지표</h3>
-            <button
-              onClick={() => {
-                if (allSubScalesExpanded) {
-                  setExpandedSubScales(new Set());
-                  setAllSubScalesExpanded(false);
-                } else {
-                  setExpandedSubScales(new Set(subCodes));
-                  setAllSubScalesExpanded(true);
-                }
-              }}
-              className="text-xs px-3 py-1.5 rounded-full border border-gray-300 text-gray-500 hover:bg-gray-200 transition font-medium"
-            >
-              {allSubScalesExpanded ? '전체 접기' : '전체 펼치기'}
-            </button>
+        {/* Section B: 페르소나 카드 (낮을 때 / 높을 때) */}
+        {traits && (
+          <div className="grid grid-cols-2 gap-4">
+            {/* 낮을 때 */}
+            <div className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition-all ${mainHighlightSide === 'low' ? 'border-orange-300 ring-2 ring-orange-100' : 'border-gray-100'}`}>
+              <div className="bg-gradient-to-r from-orange-50 to-orange-100/50 px-4 py-3 border-b border-orange-200/50">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📉</span>
+                  <div>
+                    <div className="font-bold text-orange-800 text-sm">{traits.lowPersona}</div>
+                    {traits.lowPersonaDesc && <div className="text-xs text-orange-600 leading-relaxed">{traits.lowPersonaDesc}</div>}
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 space-y-2">
+                <div className="flex items-start gap-2">
+                  <span className="text-green-500 font-bold text-xs mt-0.5 flex-shrink-0">✓</span>
+                  <span className="text-xs text-gray-700 leading-relaxed font-medium">{traits.lowAdv.join(', ')}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-red-400 font-bold text-xs mt-0.5 flex-shrink-0">✗</span>
+                  <span className="text-xs text-gray-500 leading-relaxed">{traits.lowDis.join(', ')}</span>
+                </div>
+              </div>
+            </div>
+            {/* 높을 때 */}
+            <div className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition-all ${mainHighlightSide === 'high' ? 'border-blue-300 ring-2 ring-blue-100' : 'border-gray-100'}`}>
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 px-4 py-3 border-b border-blue-200/50">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📈</span>
+                  <div>
+                    <div className="font-bold text-blue-800 text-sm">{traits.highPersona}</div>
+                    {traits.highPersonaDesc && <div className="text-xs text-blue-600 leading-relaxed">{traits.highPersonaDesc}</div>}
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 space-y-2">
+                <div className="flex items-start gap-2">
+                  <span className="text-green-500 font-bold text-xs mt-0.5 flex-shrink-0">✓</span>
+                  <span className="text-xs text-gray-700 leading-relaxed font-medium">{traits.highAdv.join(', ')}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-red-400 font-bold text-xs mt-0.5 flex-shrink-0">✗</span>
+                  <span className="text-xs text-gray-500 leading-relaxed">{traits.highDis.join(', ')}</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 min-h-0">
-            <div className="space-y-5">
-              {subCodes.map(code => {
-                const norm = norms[code];
-                const traits = scaleTraits[code] || {};
-                const lowLabel = traits.lowLabel || subScaleLabels[code];
-                const highLabel = traits.highLabel || '';
-                const scaleName = traits.name || code;
-                const isExpanded = expandedSubScales.has(code);
-                return (
-                  <div key={code} className="bg-gray-50 rounded-xl p-4">
-                    <div
-                      className="flex justify-between items-center mb-2 cursor-pointer select-none"
-                      onClick={() => {
-                        setExpandedSubScales(prev => {
-                          const next = new Set(prev);
-                          if (next.has(code)) { next.delete(code); } else { next.add(code); }
-                          return next;
-                        });
-                      }}
-                    >
-                      <span className="text-xs text-gray-500">{lowLabel}</span>
-                      <span className="text-sm font-bold text-gray-700 bg-white px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
-                        {code} ({scaleName})
-                        <span className="text-gray-400 text-xs ml-1">{isExpanded ? '▲' : '▼'}</span>
-                      </span>
-                      <span className="text-xs text-gray-500">{highLabel}</span>
-                    </div>
-                    {traits.coreDescription && (
-                      <div className="text-xs text-blue-500 text-center mb-3">{traits.coreDescription}</div>
-                    )}
-                    <div className="space-y-2.5">
-                      {rawData.map((p, idx) => {
-                        const val = p[code] || 0;
-                        const selected = isSelected(getName(p));
-                        const isTemperament = ['NS', 'HA', 'RD', 'PS'].includes(scale);
-                        // 백분위 계산 → 레벨 판정
-                        const pct = Math.round(((val - norm.m) / norm.sd + 3) / 6 * 100);
-                        const clampedPct = Math.max(0, Math.min(100, pct));
-                        const level = getLevel(clampedPct);
+        )}
 
-                        // Diverging bar chart for temperament (centered at mean)
-                        if (isTemperament) {
-                          const deviation = val - norm.m;
-                          const maxDev = 10; // 최대 편차 (좌우 각각)
-                          const barWidth = Math.min(Math.abs(deviation) / maxDev * 50, 50);
-                          const isPositive = deviation >= 0;
+        {/* Section C: 하위지표 토글 버튼 */}
+        <div className="flex justify-center">
+          <button
+            onClick={() => setShowSubScales(!showSubScales)}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full border text-sm font-medium transition-all ${
+              showSubScales
+                ? (isTemperament ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-emerald-50 border-emerald-300 text-emerald-700')
+                : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <span>{scale} 하위지표 {showSubScales ? '접기' : '펼치기'}</span>
+            <span className="text-xs">{showSubScales ? '▲' : '▼'}</span>
+          </button>
+        </div>
 
+        {/* Section D: 하위지표 상세 (토글) */}
+        {showSubScales && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-5 py-3 border-b flex items-center justify-between">
+              <h3 className="font-bold text-gray-800">{scale} 하위지표</h3>
+              <button
+                onClick={() => {
+                  if (allSubScalesExpanded) {
+                    setExpandedSubScales(new Set());
+                    setAllSubScalesExpanded(false);
+                  } else {
+                    setExpandedSubScales(new Set(subCodes));
+                    setAllSubScalesExpanded(true);
+                  }
+                }}
+                className="text-xs px-3 py-1.5 rounded-full border border-gray-300 text-gray-500 hover:bg-gray-200 transition font-medium"
+              >
+                {allSubScalesExpanded ? '전체 접기' : '전체 펼치기'}
+              </button>
+            </div>
+            <div className="p-4">
+              <div className="space-y-5">
+                {subCodes.map(code => {
+                  const norm = norms[code];
+                  const subTraits = scaleTraits[code] || {};
+                  const lowLabel = subTraits.lowLabel || subScaleLabels[code];
+                  const highLabel = subTraits.highLabel || '';
+                  const scaleName = subTraits.name || code;
+                  const isExpanded = expandedSubScales.has(code);
+                  return (
+                    <div key={code} className="bg-gray-50 rounded-xl p-4">
+                      <div
+                        className="flex justify-between items-center mb-2 cursor-pointer select-none"
+                        onClick={() => {
+                          setExpandedSubScales(prev => {
+                            const next = new Set(prev);
+                            if (next.has(code)) { next.delete(code); } else { next.add(code); }
+                            return next;
+                          });
+                        }}
+                      >
+                        <span className="text-xs text-gray-500">{lowLabel}</span>
+                        <span className="text-sm font-bold text-gray-700 bg-white px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
+                          {code} ({scaleName})
+                          <span className="text-gray-400 text-xs ml-1">{isExpanded ? '▲' : '▼'}</span>
+                        </span>
+                        <span className="text-xs text-gray-500">{highLabel}</span>
+                      </div>
+                      {subTraits.coreDescription && (
+                        <div className="text-xs text-blue-500 text-center mb-3">{subTraits.coreDescription}</div>
+                      )}
+                      <div className="space-y-2.5">
+                        {rawData.map((p, idx) => {
+                          const val = p[code] || 0;
+                          const selected = isSelected(getName(p));
+                          const pct = Math.round(((val - norm.m) / norm.sd + 3) / 6 * 100);
+                          const clampedPct = Math.max(0, Math.min(100, pct));
+                          const level = getLevel(clampedPct);
+
+                          if (isTemperament) {
+                            const deviation = val - norm.m;
+                            const maxDev = 10;
+                            const barWidth = Math.min(Math.abs(deviation) / maxDev * 50, 50);
+                            const isPositive = deviation >= 0;
+
+                            return (
+                              <div key={getName(p)} className="flex items-center gap-2">
+                                <span className={`w-14 text-xs font-medium truncate transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
+                                  {getName(p)}
+                                </span>
+                                <div className="flex-1 h-6 bg-gray-100 rounded relative overflow-hidden">
+                                  <div className="absolute top-0 bottom-0 w-0.5 bg-gray-400 z-10 left-1/2 transform -translate-x-1/2"></div>
+                                  <div
+                                    className={`absolute top-0.5 bottom-0.5 rounded transition-all duration-300 ${selected ? '' : 'opacity-20'}`}
+                                    style={{
+                                      width: `${barWidth}%`,
+                                      backgroundColor: memberColors[idx % memberColors.length],
+                                      left: isPositive ? '50%' : `${50 - barWidth}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className={`w-8 text-xs text-right font-bold transition ${selected ? (deviation >= 0 ? 'text-blue-600' : 'text-orange-500') : 'text-gray-300'}`}>
+                                  {deviation >= 0 ? '+' : ''}{deviation.toFixed(1)}
+                                </span>
+                                <span className={`w-7 text-center text-xs font-bold text-white rounded px-1 py-0.5 transition ${selected ? getLevelColor(level) : 'bg-gray-300'}`}>
+                                  {level}
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          const width = (val / 20) * 100;
                           return (
                             <div key={getName(p)} className="flex items-center gap-2">
                               <span className={`w-14 text-xs font-medium truncate transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
                                 {getName(p)}
                               </span>
-                              <div className="flex-1 h-6 bg-gray-100 rounded relative overflow-hidden">
-                                {/* 중앙선 (평균) */}
-                                <div className="absolute top-0 bottom-0 w-0.5 bg-gray-400 z-10 left-1/2 transform -translate-x-1/2"></div>
-                                {/* Diverging bar */}
-                                <div
-                                  className={`absolute top-0.5 bottom-0.5 rounded transition-all duration-300 ${selected ? '' : 'opacity-20'}`}
-                                  style={{
-                                    width: `${barWidth}%`,
-                                    backgroundColor: memberColors[idx % memberColors.length],
-                                    left: isPositive ? '50%' : `${50 - barWidth}%`,
-                                  }}
-                                />
+                              <div className="flex-1 h-6 bg-gray-200 rounded-full relative overflow-hidden">
+                                <div className="absolute top-0 bottom-0 w-0.5 bg-gray-400 z-10"
+                                  style={{ left: `${(norm.m / 20) * 100}%` }}></div>
+                                <div className={`h-full rounded-full transition-all duration-300 ${selected ? '' : 'opacity-20'}`}
+                                  style={{ width: `${Math.min(width, 100)}%`, backgroundColor: memberColors[idx % memberColors.length] }}>
+                                </div>
                               </div>
-                              <span className={`w-8 text-xs text-right font-bold transition ${selected ? (deviation >= 0 ? 'text-blue-600' : 'text-orange-500') : 'text-gray-300'}`}>
-                                {deviation >= 0 ? '+' : ''}{deviation.toFixed(1)}
+                              <span className={`w-6 text-xs text-right font-bold transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
+                                {val}
                               </span>
                               <span className={`w-7 text-center text-xs font-bold text-white rounded px-1 py-0.5 transition ${selected ? getLevelColor(level) : 'bg-gray-300'}`}>
                                 {level}
                               </span>
                             </div>
                           );
+                        })}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-2 text-center">
+                        {isTemperament ? `평균 M=${norm.m} (편차 표시)` : `평균 M=${norm.m}`}
+                      </div>
+                      {/* 접이식 특성 영역 */}
+                      {isExpanded && (subTraits.lowAdv || subTraits.highAdv) && (() => {
+                        const selectedPersons_ = rawData.filter(p => isSelected(getName(p)));
+                        let highlightSide = 'none';
+                        if (selectedPersons_.length > 0) {
+                          const avgPct = selectedPersons_.reduce((sum, p) => {
+                            const v = p[code] || 0;
+                            const pc = Math.round(((v - norm.m) / norm.sd + 3) / 6 * 100);
+                            return sum + Math.max(0, Math.min(100, pc));
+                          }, 0) / selectedPersons_.length;
+                          highlightSide = avgPct <= 40 ? 'low' : avgPct >= 61 ? 'high' : 'none';
                         }
-
-                        // Regular bar for character scales
-                        const width = (val / 20) * 100;
                         return (
-                          <div key={getName(p)} className="flex items-center gap-2">
-                            <span className={`w-14 text-xs font-medium truncate transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
-                              {getName(p)}
-                            </span>
-                            <div className="flex-1 h-6 bg-gray-200 rounded-full relative overflow-hidden">
-                              <div className="absolute top-0 bottom-0 w-0.5 bg-gray-400 z-10"
-                                style={{ left: `${(norm.m / 20) * 100}%` }}></div>
-                              <div className={`h-full rounded-full transition-all duration-300 ${selected ? '' : 'opacity-20'}`}
-                                style={{ width: `${Math.min(width, 100)}%`, backgroundColor: memberColors[idx % memberColors.length] }}>
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className={`rounded-lg p-3 transition text-right ${highlightSide === 'low' ? 'bg-orange-50 ring-1 ring-orange-200' : 'bg-gray-100 opacity-60'}`}>
+                                <div className="text-xs font-bold text-orange-600 mb-2">↓ 낮을 때</div>
+                                {subTraits.lowAdv && (
+                                  <div className="mb-1.5">
+                                    {(Array.isArray(subTraits.lowAdv) ? subTraits.lowAdv : subTraits.lowAdv.split(',')).map((item, i) => (
+                                      <div key={i} className="text-xs text-green-700 leading-relaxed">{typeof item === 'string' ? item.trim() : item} ✓</div>
+                                    ))}
+                                  </div>
+                                )}
+                                {subTraits.lowDis && (
+                                  <div>
+                                    {(Array.isArray(subTraits.lowDis) ? subTraits.lowDis : subTraits.lowDis.split(',')).map((item, i) => (
+                                      <div key={i} className="text-xs text-red-500 leading-relaxed">{typeof item === 'string' ? item.trim() : item} ✗</div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <div className={`rounded-lg p-3 transition ${highlightSide === 'high' ? 'bg-blue-50 ring-1 ring-blue-200' : 'bg-gray-100 opacity-60'}`}>
+                                <div className="text-xs font-bold text-blue-600 mb-2">↑ 높을 때</div>
+                                {subTraits.highAdv && (
+                                  <div className="mb-1.5">
+                                    {(Array.isArray(subTraits.highAdv) ? subTraits.highAdv : subTraits.highAdv.split(',')).map((item, i) => (
+                                      <div key={i} className="text-xs text-green-700 leading-relaxed">✓ {typeof item === 'string' ? item.trim() : item}</div>
+                                    ))}
+                                  </div>
+                                )}
+                                {subTraits.highDis && (
+                                  <div>
+                                    {(Array.isArray(subTraits.highDis) ? subTraits.highDis : subTraits.highDis.split(',')).map((item, i) => (
+                                      <div key={i} className="text-xs text-red-500 leading-relaxed">✗ {typeof item === 'string' ? item.trim() : item}</div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
-                            <span className={`w-6 text-xs text-right font-bold transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
-                              {val}
-                            </span>
-                            <span className={`w-7 text-center text-xs font-bold text-white rounded px-1 py-0.5 transition ${selected ? getLevelColor(level) : 'bg-gray-300'}`}>
-                              {level}
-                            </span>
                           </div>
                         );
-                      })}
+                      })()}
                     </div>
-                    <div className="text-xs text-gray-400 mt-2 text-center">
-                      {['NS', 'HA', 'RD', 'PS'].includes(scale) ? `평균 M=${norm.m} (편차 표시)` : `평균 M=${norm.m}`}
-                    </div>
-                    {/* 접이식 특성 영역 */}
-                    {isExpanded && (traits.lowAdv || traits.highAdv) && (() => {
-                      // 선택된 참가자의 평균 레벨로 강조 방향 결정
-                      const selectedPersons_ = rawData.filter(p => isSelected(getName(p)));
-                      let highlightSide = 'none'; // 'low', 'high', 'none'
-                      if (selectedPersons_.length > 0) {
-                        const avgPct = selectedPersons_.reduce((sum, p) => {
-                          const v = p[code] || 0;
-                          const pc = Math.round(((v - norm.m) / norm.sd + 3) / 6 * 100);
-                          return sum + Math.max(0, Math.min(100, pc));
-                        }, 0) / selectedPersons_.length;
-                        highlightSide = avgPct <= 40 ? 'low' : avgPct >= 61 ? 'high' : 'none';
-                      }
-                      return (
-                        <div className="mt-3 pt-3 border-t border-gray-200">
-                          <div className="grid grid-cols-2 gap-3">
-                            {/* 낮을 때 (우측정렬) */}
-                            <div className={`rounded-lg p-3 transition text-right ${highlightSide === 'low' ? 'bg-orange-50 ring-1 ring-orange-200' : 'bg-gray-100 opacity-60'}`}>
-                              <div className="text-xs font-bold text-orange-600 mb-2">↓ 낮을 때</div>
-                              {traits.lowAdv && (
-                                <div className="mb-1.5">
-                                  {(Array.isArray(traits.lowAdv) ? traits.lowAdv : traits.lowAdv.split(',')).map((item, i) => (
-                                    <div key={i} className="text-xs text-green-700 leading-relaxed">{typeof item === 'string' ? item.trim() : item} ✓</div>
-                                  ))}
-                                </div>
-                              )}
-                              {traits.lowDis && (
-                                <div>
-                                  {(Array.isArray(traits.lowDis) ? traits.lowDis : traits.lowDis.split(',')).map((item, i) => (
-                                    <div key={i} className="text-xs text-red-500 leading-relaxed">{typeof item === 'string' ? item.trim() : item} ✗</div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                            {/* 높을 때 */}
-                            <div className={`rounded-lg p-3 transition ${highlightSide === 'high' ? 'bg-blue-50 ring-1 ring-blue-200' : 'bg-gray-100 opacity-60'}`}>
-                              <div className="text-xs font-bold text-blue-600 mb-2">↑ 높을 때</div>
-                              {traits.highAdv && (
-                                <div className="mb-1.5">
-                                  {(Array.isArray(traits.highAdv) ? traits.highAdv : traits.highAdv.split(',')).map((item, i) => (
-                                    <div key={i} className="text-xs text-green-700 leading-relaxed">✓ {typeof item === 'string' ? item.trim() : item}</div>
-                                  ))}
-                                </div>
-                              )}
-                              {traits.highDis && (
-                                <div>
-                                  {(Array.isArray(traits.highDis) ? traits.highDis : traits.highDis.split(',')).map((item, i) => (
-                                    <div key={i} className="text-xs text-red-500 leading-relaxed">✗ {typeof item === 'string' ? item.trim() : item}</div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     );
   };
