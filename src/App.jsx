@@ -3391,7 +3391,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
                   </button>
                 ))}
               </div>
-              <div className="flex-1 min-h-0">{subTab === 'all' ? renderRadarChart() : renderScaleDetail(subTab)}</div>
+              <div className="flex-1 min-h-0 overflow-hidden">{subTab === 'all' ? renderRadarChart() : renderScaleDetail(subTab)}</div>
             </>
           ) : (
             renderIndividualReport()
