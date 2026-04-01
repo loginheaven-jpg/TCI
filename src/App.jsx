@@ -2691,14 +2691,14 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
                             const isPositive = deviation >= 0;
 
                             return (
-                              <div key={getName(p)} className="flex items-center gap-2">
-                                <span className={`w-14 text-xs font-medium truncate transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
+                              <div key={getName(p)} className="flex items-center gap-3">
+                                <span className={`w-16 text-sm font-medium truncate transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
                                   {getName(p)}
                                 </span>
-                                <div className="flex-1 h-6 bg-gray-100 rounded relative overflow-hidden">
+                                <div className="flex-1 h-8 bg-gray-100 rounded-lg relative overflow-hidden">
                                   <div className="absolute top-0 bottom-0 w-0.5 bg-gray-400 z-10 left-1/2 transform -translate-x-1/2"></div>
                                   <div
-                                    className={`absolute top-0.5 bottom-0.5 rounded transition-all duration-300 ${selected ? '' : 'opacity-20'}`}
+                                    className={`absolute top-1 bottom-1 rounded transition-all duration-300 ${selected ? '' : 'opacity-20'}`}
                                     style={{
                                       width: `${barWidth}%`,
                                       backgroundColor: memberColors[idx % memberColors.length],
@@ -2706,10 +2706,10 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
                                     }}
                                   />
                                 </div>
-                                <span className={`w-8 text-xs text-right font-bold transition ${selected ? (deviation >= 0 ? 'text-blue-600' : 'text-orange-500') : 'text-gray-300'}`}>
+                                <span className={`w-10 text-sm text-right font-bold transition ${selected ? (deviation >= 0 ? 'text-blue-600' : 'text-orange-500') : 'text-gray-300'}`}>
                                   {deviation >= 0 ? '+' : ''}{deviation.toFixed(1)}
                                 </span>
-                                <span className={`w-7 text-center text-xs font-bold text-white rounded px-1 py-0.5 transition ${selected ? getLevelColor(level) : 'bg-gray-300'}`}>
+                                <span className={`w-8 text-center text-sm font-bold text-white rounded-md px-1.5 py-1 transition ${selected ? getLevelColor(level) : 'bg-gray-300'}`}>
                                   {level}
                                 </span>
                               </div>
@@ -2718,21 +2718,21 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
 
                           const width = (val / 20) * 100;
                           return (
-                            <div key={getName(p)} className="flex items-center gap-2">
-                              <span className={`w-14 text-xs font-medium truncate transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
+                            <div key={getName(p)} className="flex items-center gap-3">
+                              <span className={`w-16 text-sm font-medium truncate transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
                                 {getName(p)}
                               </span>
-                              <div className="flex-1 h-6 bg-gray-200 rounded-full relative overflow-hidden">
+                              <div className="flex-1 h-8 bg-gray-200 rounded-lg relative overflow-hidden">
                                 <div className="absolute top-0 bottom-0 w-0.5 bg-gray-400 z-10"
                                   style={{ left: `${(norm.m / 20) * 100}%` }}></div>
-                                <div className={`h-full rounded-full transition-all duration-300 ${selected ? '' : 'opacity-20'}`}
+                                <div className={`h-full rounded-lg transition-all duration-300 ${selected ? '' : 'opacity-20'}`}
                                   style={{ width: `${Math.min(width, 100)}%`, backgroundColor: memberColors[idx % memberColors.length] }}>
                                 </div>
                               </div>
-                              <span className={`w-6 text-xs text-right font-bold transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
+                              <span className={`w-8 text-sm text-right font-bold transition ${selected ? 'text-gray-700' : 'text-gray-300'}`}>
                                 {val}
                               </span>
-                              <span className={`w-7 text-center text-xs font-bold text-white rounded px-1 py-0.5 transition ${selected ? getLevelColor(level) : 'bg-gray-300'}`}>
+                              <span className={`w-8 text-center text-sm font-bold text-white rounded-md px-1.5 py-1 transition ${selected ? getLevelColor(level) : 'bg-gray-300'}`}>
                                 {level}
                               </span>
                             </div>
@@ -3293,9 +3293,9 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 overflow-hidden flex flex-col">
       {/* 헤더 */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-4 p-3 flex items-center justify-between">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-4 p-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="text-gray-500 hover:text-gray-700 font-medium flex items-center gap-1 text-sm">
             ← 목록
@@ -3331,7 +3331,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
         </div>
       </div>
 
-      <div className="flex gap-4 h-[calc(100vh-140px)]">
+      <div className="flex gap-4 flex-1 min-h-0">
         {/* 참가자 목록 */}
         <div className="w-44 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex-shrink-0 overflow-y-auto">
           <div className="flex items-center justify-between mb-2">
