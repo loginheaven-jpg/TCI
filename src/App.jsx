@@ -2463,17 +2463,18 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
     }
 
     return (
-      <div className="flex flex-col gap-4 pr-1">
-        {/* Section A: 헤더 + 스펙트럼 차트 */}
+      <div className="flex flex-col h-full">
+        {/* Section A: 헤더 + 스펙트럼 차트 (고정) */}
+        <div className="flex-shrink-0 mb-4">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {/* 헤더 */}
-          <div className={`px-5 py-4 ${
+          <div className={`px-5 py-2.5 ${
             isTemperament
               ? 'bg-gradient-to-r from-blue-700 to-blue-800'
               : 'bg-gradient-to-r from-emerald-700 to-emerald-800'
           }`}>
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex items-baseline gap-2">
                 <h3 className="text-xl font-bold text-white">{scaleLabels[scale]}</h3>
                 <p className={`text-xs ${isTemperament ? 'text-blue-200' : 'text-emerald-200'}`}>{engLabels[scale]}</p>
               </div>
@@ -2486,7 +2487,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
               )}
             </div>
             {traits?.description && (
-              <p className="text-xs text-white/80 mt-2 leading-relaxed">{traits.description}</p>
+              <p className="text-xs text-white/80 mt-1 leading-relaxed">{traits.description}</p>
             )}
           </div>
 
@@ -2559,6 +2560,10 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
             </div>
           </div>
         </div>
+        </div>
+
+        {/* Section B~D: 스크롤 영역 */}
+        <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
 
         {/* Section B: 페르소나 카드 (낮을 때 / 높을 때) */}
         {traits && (
@@ -2802,6 +2807,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
             </div>
           </div>
         )}
+        </div>
       </div>
     );
   };
@@ -3391,7 +3397,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
                   </button>
                 ))}
               </div>
-              <div className="flex-1 min-h-0 overflow-y-auto">{subTab === 'all' ? renderRadarChart() : renderScaleDetail(subTab)}</div>
+              <div className="flex-1 min-h-0 flex flex-col">{subTab === 'all' ? renderRadarChart() : renderScaleDetail(subTab)}</div>
             </>
           ) : (
             renderIndividualReport()
