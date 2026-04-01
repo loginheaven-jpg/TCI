@@ -2492,7 +2492,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
           </div>
 
           {/* 스펙트럼 차트 */}
-          <div className="p-5">
+          <div className={`p-5 ${rawData.length > 7 ? 'max-h-[320px] overflow-y-auto' : ''}`}>
             {/* 스펙트럼 라벨 */}
             <div className="flex justify-between items-center mb-1 px-24">
               <span className="text-xs font-bold text-orange-600">← {traits?.lowPersona || '낮음'}</span>
