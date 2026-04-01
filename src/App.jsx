@@ -2463,7 +2463,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
     }
 
     return (
-      <div className="h-full flex flex-col gap-4 overflow-y-auto pr-1">
+      <div className="flex flex-col gap-4 pr-1">
         {/* Section A: 헤더 + 스펙트럼 차트 */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {/* 헤더 */}
@@ -3391,7 +3391,7 @@ function AnalysisPage({ group, onBack, mainScaleTraits, scaleTraits, norms, onCo
                   </button>
                 ))}
               </div>
-              <div className="flex-1 min-h-0 overflow-hidden">{subTab === 'all' ? renderRadarChart() : renderScaleDetail(subTab)}</div>
+              <div className="flex-1 min-h-0 overflow-y-auto">{subTab === 'all' ? renderRadarChart() : renderScaleDetail(subTab)}</div>
             </>
           ) : (
             renderIndividualReport()
